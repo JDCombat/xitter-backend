@@ -6,6 +6,7 @@ export default defineConfig({
   entities: [XitterPost],
   dbName: "xitterdb",
   user: "postgres",
-  password: process.env.DB_PASSWORD,
-  driver: PostgreSqlDriver,
+  password: process.env.POSTGRES_PASSWORD,
+  host: process.env.DB_HOST,
+  driver: PostgreSqlDriver
 });
