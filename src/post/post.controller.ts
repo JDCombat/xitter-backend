@@ -1,23 +1,42 @@
-import { EntityManager } from '@mikro-orm/postgresql';
-import { Body, Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
-import { XitterPost } from 'src/entities/Post';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  UseGuards,
+} from "@nestjs/common";
+import { AuthGuard } from "src/auth.guard";
+import { PostService } from "./post.service";
+import { User, type UserPayload } from "src/user/user.decorator";
 
-@Controller('/post')
+@Controller("/post")
 export class PostController {
-  constructor(private em: EntityManager) {}
+  constructor(private readonly service: PostService) {}
   @Get()
   async getAll() {
-    const all = await this.em.findAll(XitterPost);
-    return all;
+    return await this.service.getAll();
   }
-  @Get('/:id')
-  async getById(@Param('id', ParseIntPipe) id: number) {
-    const post = await this.em.findOne(XitterPost, id);
-    return post;
+  @UseGuards(AuthGuard)
+  @Post("/create")
+  async create(
+    @Body() postData: Record<string, string>,
+    @User() user: UserPayload,
+  ) {
+    return await this.service.create(postData, user.sub);
   }
-  @Post('/create')
-  async create(@Body('content') content: string) {
-    this.em.create(XitterPost, { content: content });
-    await this.em.flush();
+  @UseGuards(AuthGuard)
+  @Post("/repost/:id")
+  async repost() {}
+  @Get("/:id")
+  async getById(@Param("id", ParseIntPipe) id: number) {
+    return await this.service.getById(id);
   }
+  @Put("/:id")
+  async editPost(@Param("id", ParseIntPipe) id: number) {}
+  @Delete("/:id")
+  async deletePost(@Param("id", ParseIntPipe) id: number) {}
 }

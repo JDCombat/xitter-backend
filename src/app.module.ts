@@ -1,12 +1,14 @@
-import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { MikroOrmModule } from '@mikro-orm/nestjs';
+import { Module } from "@nestjs/common";
+import { AppController } from "./app.controller";
+import { AppService } from "./app.service";
+import { MikroOrmModule } from "@mikro-orm/nestjs";
 import config from "../mikro-orm.config";
-import { PostModule } from "./post/post.module"
+import { PostModule } from "./post/post.module";
+import { AuthModule } from "./auth/auth.module";
+import { UserModule } from "./user/user.module";
 
 @Module({
-  imports: [PostModule, MikroOrmModule.forRoot(config)],
+  imports: [MikroOrmModule.forRoot(config), PostModule, AuthModule, UserModule],
   controllers: [AppController],
   providers: [AppService],
 })

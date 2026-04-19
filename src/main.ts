@@ -1,6 +1,6 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { MikroORM } from '@mikro-orm/postgresql';
+import { NestFactory } from "@nestjs/core";
+import { AppModule } from "./app.module";
+import { MikroORM } from "@mikro-orm/postgresql";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
