@@ -15,14 +15,16 @@ export class AuthController {
       username: string;
       email: string;
       password: string;
-      image?: File;
+      imageId?: string;
     },
   ) {
     return await this.authService.signUp(
       body.username,
       body.email,
       body.password,
-      body.image,
+      body.imageId,
     );
   }
+  @Post("/refreshKey")
+  async refreshKey() {}
 }

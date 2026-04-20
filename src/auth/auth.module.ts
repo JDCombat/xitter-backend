@@ -11,7 +11,7 @@ import { MikroOrmModule } from "@mikro-orm/nestjs";
     JwtModule.register({
       global: true,
       secret: process.env.JWTSECRET,
-      signOptions: { expiresIn: "60s" },
+      signOptions: { expiresIn: "600s" },
     }),
   ],
   providers: [AuthService],

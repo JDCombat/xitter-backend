@@ -1,27 +1,27 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { unlink, writeFile } from "fs/promises";
-import path from "path";
+import { wrap } from "@mikro-orm/core";
+import { , Injectable, NotFoundException } from "@nestjs/common";
+import { MediaRepository } from "src/db/repositories/MediaRepository";
 import { UserRepository } from "src/db/repositories/userRepository";
 
 @Injectable()
 export class UserService {
-  constructor(private readonly repo: UserRepository) {}
-  async getById(id: number) {
-    return await this.repo.findOneOrFail({ id });
+  constructor(private readonly userRepo: UserRepository, private readonly mediaRepo: MediaRepository) {}
+  async getById(id: string) {
+    return await this.userRepo.findOneOrFail({ id });
   }
-  async getPosts(id: number) {
-    const user = await this.repo.findOne({ id }, { populate: ["posts"] });
+  async getPosts(id: string) {
+    const user = await this.userRepo.findOne({ id }, { populate: ["posts"] });
     if (!user) {
       throw new NotFoundException("User with id does not exist");
     }
     return user.posts;
   }
-  async followUser(target: number, user: number) {
-    const toFollow = await this.repo.findOne(
+  async followUser(target: string, user: string) {
+    const toFollow = await this.userRepo.findOne(
       { id: target },
       { populate: ["followers"] },
     );
-    const following = await this.repo.findOne(
+    const following = await this.userRepo.findOne(
       { id: user },
       { populate: ["following"] },
     );
@@ -30,14 +30,14 @@ export class UserService {
     }
     toFollow.followers.add(following!);
     following?.following.add(toFollow);
-    await this.repo.getEntityManager().flush();
+    await this.userRepo.getEntityManager().flush();
   }
-  async unfollowUser(targetId: number, userId: number) {
-    const toUnfollow = await this.repo.findOne(
+  async unfollowUser(targetId: string, userId: string) {
+    const toUnfollow = await this.userRepo.findOne(
       { id: targetId },
       { populate: ["followers"] },
     );
-    const following = await this.repo.findOne(
+    const following = await this.userRepo.findOne(
       { id: userId },
       { populate: ["following"] },
     );
@@ -46,26 +46,21 @@ export class UserService {
     }
     toUnfollow?.followers.remove(following!);
     following?.following.remove(toUnfollow);
-    await this.repo.getEntityManager().flush();
+    await this.userRepo.getEntityManager().flush();
   }
-  async changeProfilePicture(userId: number, image: File) {
-    const user = (await this.repo.findOne({ id: userId }))!;
-    if (user.image != "/uploads/default.png") {
-      await unlink(user.image);
-      await writeFile(user.image, await image.bytes());
-    } else {
-      const savePath = path.join(
-        "/uploads/",
-        user.tag + image.type.split("/")[1],
-      );
-      await writeFile(savePath, await image.bytes());
-      user.image = savePath;
+  async changeProfilePicture(userId: string, mediaId: string) {
+    const user = (await this.userRepo.findOne({ id: userId }))!;
+    const media = await this.mediaRepo.findOne({ id: mediaId });
+    if(!media){
+      throw new NotFoundException("Media with id doesn't exist");
     }
-    await this.repo.getEntityManager().flush();
+    user.image = media;
+    await this.userRepo.getEntityManager().flush();
   }
-  async changeName(userId: number, newName: string) {
-    const user = await this.repo.findOne({ id: userId });
+  async changeName(userId: string, newName: string) {
+    const user = await this.userRepo.findOne({ id: userId });
     user!.name = newName;
-    await this.repo.getEntityManager().flush();
+    await this.userRepo.getEntityManager().flush();
+    return user
   }
 }

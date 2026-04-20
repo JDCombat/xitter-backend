@@ -3,6 +3,7 @@ import { BaseEntitySchema } from "./BaseEntity";
 import { HashtagSchema } from "./Hashtags";
 import { UserSchema } from "./User";
 import { PostRepository } from "src/db/repositories/postRepository";
+import { MediaSchema } from "./Media";
 
 export const PostSchema = defineEntity({
   name: "Post",
@@ -11,7 +12,7 @@ export const PostSchema = defineEntity({
   properties: {
     content: p.text().length(2000),
     likes: p.bigint().onCreate(() => BigInt(0)),
-    media: p.array().nullable(),
+    media: () => p.oneToMany(MediaSchema).where({ type: "postAttachment" }),
     hashtags: () =>
       p
         .manyToMany(HashtagSchema)
@@ -23,7 +24,7 @@ export const PostSchema = defineEntity({
         .oneToOne(PostSchema)
         .nullable()
         .serializer((value) => value.id),
-    reposters: () => p.manyToMany(UserSchema)
+    reposters: () => p.manyToMany(UserSchema),
   },
 });
 export type IPost = InferEntity<typeof PostSchema>;

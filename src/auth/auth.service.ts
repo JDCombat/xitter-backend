@@ -6,8 +6,6 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { UserRepository } from "src/db/repositories/userRepository";
 import bcrypt from "bcrypt";
-import { writeFile } from "fs/promises";
-import path from "path";
 
 @Injectable()
 export class AuthService {
@@ -35,7 +33,7 @@ export class AuthService {
     username: string,
     email: string,
     password: string,
-    image?: File,
+    imageId?: string,
   ) {
     const user = await this.repo.findOne({
       $or: [{ name: username }, { email: email }],
@@ -46,20 +44,15 @@ export class AuthService {
 
     const tag = username.toLocaleLowerCase().replace(" ", "_");
 
-    let savePath: string = "";
-    if (image) {
-      savePath = path.join("uploads", tag + image.name.split(".")[1]);
-      await writeFile(savePath, await image.bytes());
-    }
-
     const hash = await bcrypt.hash(password, 10);
     this.repo.create({
       name: username,
       tag: tag,
       email: email,
       password: hash,
-      image: image ? savePath : "uploads/default.jpg",
+      image: imageId,
     });
     await this.repo.getEntityManager().flush();
   }
+  async refreshToken() {}
 }

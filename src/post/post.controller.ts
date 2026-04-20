@@ -4,7 +4,7 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
+  ParseUUIDPipe,
   Post,
   Put,
   UseGuards,
@@ -28,15 +28,70 @@ export class PostController {
   ) {
     return await this.service.create(postData, user.sub);
   }
-  @UseGuards(AuthGuard)
-  @Post("/repost/:id")
-  async repost() {}
   @Get("/:id")
-  async getById(@Param("id", ParseIntPipe) id: number) {
+  async getById(@Param("id", ParseUUIDPipe) id: string) {
     return await this.service.getById(id);
   }
+  @UseGuards(AuthGuard)
   @Put("/:id")
-  async editPost(@Param("id", ParseIntPipe) id: number) {}
+  async editPost(
+    @Param("id", ParseUUIDPipe) id: string,
+    @User() user: UserPayload,
+    @Body()
+    postData: {
+      content: string;
+      mediaId: string;
+    },
+  ) {
+    return await this.service.editPost(id, postData, user.sub);
+  }
+
+  @UseGuards(AuthGuard)
   @Delete("/:id")
-  async deletePost(@Param("id", ParseIntPipe) id: number) {}
+  async deletePost(
+    @Param("id", ParseUUIDPipe) id: string,
+    @User() user: UserPayload,
+  ) {
+    return await this.service.deletePost(id, user.sub);
+  }
+
+  @UseGuards(AuthGuard)
+  @Post("/:id/repost")
+  async repost(
+    @Param("id", ParseUUIDPipe) id: string,
+    @User() user: UserPayload,
+  ) {
+    return await this.service.repost(id, user.sub);
+  }
+
+  @UseGuards(AuthGuard)
+  @Delete("/:id/repost")
+  async deleteRepost(
+    @Param("id", ParseUUIDPipe) id: string,
+    @User() user: UserPayload,
+  ) {
+    return await this.service.deleteRepost(id, user.sub);
+  }
+
+  @Get("/:id/likes")
+  async getLikes(@Param("id", ParseUUIDPipe) id: string) {
+    return await this.service.getPostLikes(id);
+  }
+  @UseGuards(AuthGuard)
+  @Post("/:id/likes")
+  async likePost(
+    @Param("id", ParseUUIDPipe) id: string,
+    @User() user: UserPayload,
+  ) {
+    return await this.service.likePost(id, user.sub);
+  }
+
+  @UseGuards(AuthGuard)
+  @Delete("/:id/likes")
+  async dislikePost(
+    @Param("id", ParseUUIDPipe) id: string,
+    @User() user: UserPayload,
+  ) {
+    return await this.service.dislikePost(id, user.sub);
+  }
 }

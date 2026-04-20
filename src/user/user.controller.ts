@@ -4,7 +4,7 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
+  ParseUUIDPipe,
   Post,
   UseGuards,
 } from "@nestjs/common";
@@ -15,30 +15,6 @@ import { type UserPayload, User } from "./user.decorator";
 @Controller("user")
 export class UserController {
   constructor(private readonly service: UserService) {}
-  @Get("/:id")
-  async getById(@Param("id", ParseIntPipe) id: number) {
-    return await this.service.getById(id);
-  }
-  @Get("/:id/posts")
-  async getPosts(@Param("id", ParseIntPipe) id: number) {
-    return await this.service.getPosts(id);
-  }
-  @UseGuards(AuthGuard)
-  @Post("/follow/:id")
-  async followUser(
-    @Param("id", ParseIntPipe) id: number,
-    @User() user: UserPayload,
-  ) {
-    await this.service.followUser(id, user.sub);
-  }
-  @UseGuards(AuthGuard)
-  @Delete("/follow/:id")
-  async unFolllow(
-    @Param("id", ParseIntPipe) id: number,
-    @User() user: UserPayload,
-  ) {
-    await this.service.unfollowUser(id, user.sub);
-  }
   @UseGuards(AuthGuard)
   @Post("/changeName")
   async changeName(
@@ -54,4 +30,61 @@ export class UserController {
     @Body("image") image: Express.Multer.File,
     @User() user: UserPayload,
   ) {}
+
+  @Get("/:id")
+  async getById(@Param("id", ParseUUIDPipe) id: string) {
+    return await this.service.getById(id);
+  }
+  @Get("/:id/posts")
+  async getPosts(@Param("id", ParseUUIDPipe) id: string) {
+    return await this.service.getPosts(id);
+  }
+  @UseGuards(AuthGuard)
+  @Post("/:id/follow")
+  async followUser(
+    @Param("id", ParseUUIDPipe) id: string,
+    @User() user: UserPayload,
+  ) {
+    await this.service.followUser(id, user.sub);
+  }
+  @UseGuards(AuthGuard)
+  @Delete("/:id/follow")
+  async unFolllow(
+    @Param("id", ParseUUIDPipe) id: string,
+    @User() user: UserPayload,
+  ) {
+    await this.service.unfollowUser(id, user.sub);
+  }
+  @UseGuards(AuthGuard)
+  @Post("/:id/block")
+  async blockUser(
+    @Param("id", ParseUUIDPipe) id: string,
+    @User() user: UserPayload,
+  ) {
+    await this.service.blockUser(id, user.sub);
+  }
+  @UseGuards(AuthGuard)
+  @Delete("/:id/block")
+  async unblockUser(
+    @Param("id", ParseUUIDPipe) id: string,
+    @User() user: UserPayload,
+  ) {
+    await this.service.unblockUser(id, user.sub);
+  }
+  @UseGuards(AuthGuard)
+  @Post("/:id/mute")
+  async muteUser(
+    @Param("id", ParseUUIDPipe) id: string,
+    @User() user: UserPayload,
+  ) {
+    await this.service.muteUser(id, user.sub);
+  }
+  @UseGuards(AuthGuard)
+  @Delete("/:id/mute")
+  async unmuteUser(
+    @Param("id", ParseUUIDPipe) id: string,
+    @User() user: UserPayload,
+  ) {
+    await this.service.unmuteUser(id, user.sub);
+  }
 }

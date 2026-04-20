@@ -3,7 +3,7 @@ import { defineEntity, p, type InferEntity } from "@mikro-orm/core";
 export const BaseEntitySchema = defineEntity({
   name: "BaseEntity",
   properties: {
-    id: p.integer().primary(),
+    id: p.uuid().primary(),
     createdAt: p.datetime().onCreate(() => new Date()),
     updatedAt: p
       .datetime()
