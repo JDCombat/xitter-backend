@@ -9,31 +9,38 @@ import {
   ParseUUIDPipe,
   Post,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { MediaService } from "./media.service";
+import { AuthGuard } from "src/auth.guard";
+import { User, type UserPayload } from "src/user/user.decorator";
 
 @Controller("media")
 export class MediaController {
   constructor(private readonly service: MediaService) {}
+
+  @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor("file"))
   @Post("/upload")
   async uploadFile(
     @UploadedFile(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({ maxSize: 15000 }),
+          new MaxFileSizeValidator({ maxSize: 15000000 }),
           new FileTypeValidator({ fileType: /(image|video)\/\w+/ }),
         ],
       }),
     )
     file: Express.Multer.File,
-    @Body("type") type: string,
+    @User() user: UserPayload,
   ) {
-    return this.service.uploadFile(file, type);
+    return this.service.uploadFile(file, user.sub);
   }
 
   @Get("/:id")
-  async getMedia(@Param("id", ParseUUIDPipe) id: string) {}
+  async getMedia(@Param("id", ParseUUIDPipe) id: string) {
+    return this.service.getFile(id);
+  }
 }

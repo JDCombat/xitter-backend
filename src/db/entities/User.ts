@@ -11,18 +11,16 @@ export const UserSchema = defineEntity({
   properties: {
     name: p.string(),
     tag: p.string().unique(),
-    email: p.string().unique(),
+    email: p.string().unique().hidden(),
     password: p.string().hidden().ref().lazy(),
-    image: () =>
-      p
-        .oneToOne(MediaSchema)
-        .where({ type: "profilePicture" })
-        .nullable()
-        .owner(),
+    image: () => p.oneToOne(MediaSchema).nullable().owner(),
     posts: () => p.oneToMany(PostSchema).mappedBy("author"),
     reposts: () => p.manyToMany(PostSchema),
-    following: () => p.manyToMany(UserSchema).inversedBy("followers"),
-    followers: () => p.manyToMany(UserSchema).mappedBy("following"),
+    following: () => p.manyToMany(UserSchema).inversedBy("followers").nullable(),
+    followers: () => p.manyToMany(UserSchema).mappedBy("following").nullable(),
+    likes: () => p.manyToMany(PostSchema).nullable(),
+    blockedUsers: () => p.manyToMany(UserSchema).nullable(),
+    mutedUsers: () => p.manyToMany(UserSchema).nullable(),
   },
 });
 export type IUser = InferEntity<typeof UserSchema>;

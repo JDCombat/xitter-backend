@@ -26,10 +26,10 @@ export class UserController {
 
   @UseGuards(AuthGuard)
   @Post("/changePicture")
-  async changePfp(
-    @Body("image") image: Express.Multer.File,
-    @User() user: UserPayload,
-  ) {}
+  async changePfp(@Body("mediaId") imageId: string, @User() user: UserPayload) {
+    return this.service.changeProfilePicture(imageId, user.sub);
+  }
+
 
   @Get("/:id")
   async getById(@Param("id", ParseUUIDPipe) id: string) {
@@ -45,7 +45,7 @@ export class UserController {
     @Param("id", ParseUUIDPipe) id: string,
     @User() user: UserPayload,
   ) {
-    await this.service.followUser(id, user.sub);
+    return await this.service.followUser(id, user.sub);
   }
   @UseGuards(AuthGuard)
   @Delete("/:id/follow")
@@ -53,7 +53,7 @@ export class UserController {
     @Param("id", ParseUUIDPipe) id: string,
     @User() user: UserPayload,
   ) {
-    await this.service.unfollowUser(id, user.sub);
+    return await this.service.unfollowUser(id, user.sub);
   }
   @UseGuards(AuthGuard)
   @Post("/:id/block")
@@ -69,7 +69,7 @@ export class UserController {
     @Param("id", ParseUUIDPipe) id: string,
     @User() user: UserPayload,
   ) {
-    await this.service.unblockUser(id, user.sub);
+    return await this.service.unblockUser(id, user.sub);
   }
   @UseGuards(AuthGuard)
   @Post("/:id/mute")
@@ -77,7 +77,7 @@ export class UserController {
     @Param("id", ParseUUIDPipe) id: string,
     @User() user: UserPayload,
   ) {
-    await this.service.muteUser(id, user.sub);
+    return await this.service.muteUser(id, user.sub);
   }
   @UseGuards(AuthGuard)
   @Delete("/:id/mute")
@@ -85,6 +85,8 @@ export class UserController {
     @Param("id", ParseUUIDPipe) id: string,
     @User() user: UserPayload,
   ) {
-    await this.service.unmuteUser(id, user.sub);
+    return await this.service.unmuteUser(id, user.sub);
   }
+
+
 }

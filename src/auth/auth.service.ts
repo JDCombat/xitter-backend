@@ -35,17 +35,17 @@ export class AuthService {
     password: string,
     imageId?: string,
   ) {
-    const user = await this.repo.findOne({
+    const potentialUser = await this.repo.findOne({
       $or: [{ name: username }, { email: email }],
     });
-    if (user) {
+    if (potentialUser) {
       throw new ConflictException("User with name or mail already exists");
     }
 
     const tag = username.toLocaleLowerCase().replace(" ", "_");
 
     const hash = await bcrypt.hash(password, 10);
-    this.repo.create({
+    const user = this.repo.create({
       name: username,
       tag: tag,
       email: email,
@@ -53,6 +53,7 @@ export class AuthService {
       image: imageId,
     });
     await this.repo.getEntityManager().flush();
+    return user;
   }
   async refreshToken() {}
 }

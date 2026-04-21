@@ -11,19 +11,21 @@ export const PostSchema = defineEntity({
   repository: () => PostRepository,
   properties: {
     content: p.text().length(2000),
-    likes: p.bigint().onCreate(() => BigInt(0)),
-    media: () => p.oneToMany(MediaSchema).where({ type: "postAttachment" }),
+    likes: () =>
+      p
+        .manyToMany(UserSchema)
+        .nullable(),
+    media: () =>
+      p.oneToMany(MediaSchema).mappedBy("post").nullable(),
     hashtags: () =>
       p
         .manyToMany(HashtagSchema)
-        .nullable()
-        .serializer((value) => value.name),
+        .nullable(),
     author: () => p.manyToOne(UserSchema).serializer((value) => value.tag),
     repliesTo: () =>
       p
         .oneToOne(PostSchema)
-        .nullable()
-        .serializer((value) => value.id),
+        .nullable(),
     reposters: () => p.manyToMany(UserSchema),
   },
 });

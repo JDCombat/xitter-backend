@@ -1,5 +1,6 @@
 import { wrap } from "@mikro-orm/core";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, StreamableFile } from "@nestjs/common";
+import { createReadStream } from "fs";
 import { writeFile } from "fs/promises";
 import path from "path";
 import { MediaRepository } from "src/db/repositories/MediaRepository";
@@ -7,14 +8,14 @@ import { MediaRepository } from "src/db/repositories/MediaRepository";
 @Injectable()
 export class MediaService {
   constructor(private readonly repo: MediaRepository) {}
-  async uploadFile(file: Express.Multer.File, type: string) {
-    const fileName = crypto.randomUUID() + file.mimetype.split("/")[1];
-    const savePath = path.join("uploads", fileName);
+  async uploadFile(file: Express.Multer.File, userId: string) {
+    const fileName = crypto.randomUUID() + "." + file.mimetype.split("/")[1];
+    const savePath = path.join(process.cwd(), "uploads", fileName);
     await writeFile(savePath, file.buffer);
     const media = this.repo.create({
       name: fileName,
       mimeType: file.mimetype,
-      type: type as "profilePicture" | "postAttachment",
+      owner: userId,
     });
     await this.repo.getEntityManager().flush();
     return wrap(media);
@@ -24,5 +25,9 @@ export class MediaService {
     if (!file) {
       throw new NotFoundException("File with id does not exist");
     }
+    const stream = createReadStream(path.join(process.cwd(), "uploads", file.name));
+    return new StreamableFile(stream, {
+      type: file.mimeType,
+    });
   }
 }

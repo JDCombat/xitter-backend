@@ -10,7 +10,7 @@ export const HashtagSchema = defineEntity({
   properties: {
     name: p.text().unique(),
     popularity: p.decimal("number").onCreate(() => 0),
-    posts: () => p.manyToMany(UserSchema).serializer((value) => value.tag),
+    posts: () => p.manyToMany(UserSchema),
   },
 });
 export type IHashtag = InferEntity<typeof HashtagSchema>;

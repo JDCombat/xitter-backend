@@ -1,13 +1,18 @@
 import { wrap } from "@mikro-orm/core";
-import { , Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { MediaRepository } from "src/db/repositories/MediaRepository";
 import { UserRepository } from "src/db/repositories/userRepository";
 
 @Injectable()
 export class UserService {
-  constructor(private readonly userRepo: UserRepository, private readonly mediaRepo: MediaRepository) {}
+  constructor(
+    private readonly userRepo: UserRepository,
+    private readonly mediaRepo: MediaRepository,
+  ) {}
   async getById(id: string) {
-    return await this.userRepo.findOneOrFail({ id });
+    const user = await this.userRepo.findOne({ id }, {populate: ["followers", "following"]});
+    console.log(user);
+    return wrap(user!).toJSON();
   }
   async getPosts(id: string) {
     const user = await this.userRepo.findOne({ id }, { populate: ["posts"] });
@@ -28,8 +33,8 @@ export class UserService {
     if (!toFollow) {
       throw new NotFoundException("User with id does not exist");
     }
-    toFollow.followers.add(following!);
-    following?.following.add(toFollow);
+    toFollow.followers?.add(following!);
+    following!.following?.add(toFollow);
     await this.userRepo.getEntityManager().flush();
   }
   async unfollowUser(targetId: string, userId: string) {
@@ -44,15 +49,18 @@ export class UserService {
     if (!toUnfollow) {
       throw new NotFoundException("User with id does not exist");
     }
-    toUnfollow?.followers.remove(following!);
-    following?.following.remove(toUnfollow);
+    toUnfollow.followers?.remove(following!);
+    following!.following?.remove(toUnfollow);
     await this.userRepo.getEntityManager().flush();
   }
   async changeProfilePicture(userId: string, mediaId: string) {
     const user = (await this.userRepo.findOne({ id: userId }))!;
     const media = await this.mediaRepo.findOne({ id: mediaId });
-    if(!media){
+    if (!media) {
       throw new NotFoundException("Media with id doesn't exist");
+    }
+    if (!media.mimeType.includes("image")) {
+      throw new BadRequestException("Pass id of an image");
     }
     user.image = media;
     await this.userRepo.getEntityManager().flush();
@@ -61,6 +69,46 @@ export class UserService {
     const user = await this.userRepo.findOne({ id: userId });
     user!.name = newName;
     await this.userRepo.getEntityManager().flush();
-    return user
+    return user;
+  }
+  async blockUser(blockId: string, userId: string) {
+    const user = await this.userRepo.findOne({ id: userId });
+    const userToBlock = await this.userRepo.findOne({ id: blockId });
+    if (!userToBlock) {
+      throw new NotFoundException("User with id does not exist");
+    }
+    user!.blockedUsers?.add(userToBlock);
+    await this.userRepo.getEntityManager().flush();
+    return { blocked: true };
+  }
+  async unblockUser(blockId: string, userId: string) {
+    const user = await this.userRepo.findOne({ id: userId });
+    const userToBlock = await this.userRepo.findOne({ id: blockId });
+    if (!userToBlock) {
+      throw new NotFoundException("User with id does not exist");
+    }
+    user!.blockedUsers?.remove(userToBlock);
+    await this.userRepo.getEntityManager().flush();
+    return { blocked: false };
+  }
+  async muteUser(blockId: string, userId: string) {
+    const user = await this.userRepo.findOne({ id: userId });
+    const userToMute = await this.userRepo.findOne({ id: blockId });
+    if (!userToMute) {
+      throw new NotFoundException("User with id does not exist");
+    }
+    user!.mutedUsers?.add(userToMute);
+    await this.userRepo.getEntityManager().flush();
+    return { muted: true };
+  }
+  async unmuteUser(blockId: string, userId: string) {
+    const user = await this.userRepo.findOne({ id: userId });
+    const userToMute = await this.userRepo.findOne({ id: blockId });
+    if (!userToMute) {
+      throw new NotFoundException("User with id does not exist");
+    }
+    user!.mutedUsers?.add(userToMute);
+    await this.userRepo.getEntityManager().flush();
+    return { muted: false };
   }
 }

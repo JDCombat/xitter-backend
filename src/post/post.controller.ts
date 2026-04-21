@@ -12,6 +12,7 @@ import {
 import { AuthGuard } from "src/auth.guard";
 import { PostService } from "./post.service";
 import { User, type UserPayload } from "src/user/user.decorator";
+import { PostDataDTO } from "./dtos";
 
 @Controller("/post")
 export class PostController {
@@ -23,7 +24,7 @@ export class PostController {
   @UseGuards(AuthGuard)
   @Post("/create")
   async create(
-    @Body() postData: Record<string, string>,
+    @Body() postData: PostDataDTO,
     @User() user: UserPayload,
   ) {
     return await this.service.create(postData, user.sub);
@@ -38,10 +39,7 @@ export class PostController {
     @Param("id", ParseUUIDPipe) id: string,
     @User() user: UserPayload,
     @Body()
-    postData: {
-      content: string;
-      mediaId: string;
-    },
+    postData: PostDataDTO,
   ) {
     return await this.service.editPost(id, postData, user.sub);
   }

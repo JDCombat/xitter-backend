@@ -8,6 +8,8 @@ RUN npm i
 
 COPY . .
 
+RUN mkdir uploads
+
 ENV PORT=80
 
 EXPOSE 80
