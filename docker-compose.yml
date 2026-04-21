@@ -5,10 +5,14 @@ services:
       - "80:80"
     environment:
       DB_HOST: db
+    depends_on:
+      - db
+    volumes:
+      - :upload:rw
   db:
     image: postgres
     restart: always
     ports:
-      - 5432:5432
+      - "5432:5432"
     env_file:
       - .env

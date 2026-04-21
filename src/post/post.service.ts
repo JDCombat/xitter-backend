@@ -59,6 +59,38 @@ export class PostService {
     }
     if (post.content != postData.content) {
       post.hashtags?.removeAll();
+      const names = postData.content.match(/#(\w+)/g)?.map((e) => e.slice(1));
+      if (names?.length ?? 0 > 0) {
+        const existingTags = await this.hashtagRepo.find({
+          name: { $in: names },
+        });
+        const existingTagsMap = new Map(existingTags.map((t) => [t.name, t]));
+        names?.forEach((e) => {
+          let tag = existingTagsMap.get(e);
+          if (!tag) {
+            tag = this.hashtagRepo.create({ name: e });
+          }
+          post.hashtags?.add(tag);
+        });
+      }  
     }
+
   }
+  async deletePost(postId: string, userId: string){
+    const post = await this.postRepo.findOne({id: postId})
+    if(!post){
+      throw new NotFoundException("Post with id does not exist");
+    }
+    if (post.author.id != userId) {
+      throw new ForbiddenException("You don't have permissions to this post");
+    }
+
+    await this.postRepo.nativeDelete({id: postId})
+  }
+  async repost(postId: string, user: string){
+    
+  }
+
 }
+
+
