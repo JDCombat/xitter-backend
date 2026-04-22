@@ -11,7 +11,7 @@ export const MediaSchema = defineEntity({
   properties: {
     name: p.text().unique(),
     mimeType: p.text(),
-    post: () => p.manyToOne(PostSchema).nullable(),
+    post: () => p.manyToOne(PostSchema).nullable().hidden(),
     owner: () => p.manyToOne(UserSchema)
   },
 });

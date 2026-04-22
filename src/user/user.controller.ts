@@ -30,6 +30,11 @@ export class UserController {
     return this.service.changeProfilePicture(imageId, user.sub);
   }
 
+  @UseGuards(AuthGuard)
+  @Get("/likes")
+  async getUserLikes(@User() user: UserPayload){
+    return this.service.getLikes(user.sub);
+  }
 
   @Get("/:id")
   async getById(@Param("id", ParseUUIDPipe) id: string) {

@@ -1,4 +1,3 @@
-import { wrap } from "@mikro-orm/core";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { MediaRepository } from "src/db/repositories/MediaRepository";
 import { UserRepository } from "src/db/repositories/userRepository";
@@ -10,9 +9,7 @@ export class UserService {
     private readonly mediaRepo: MediaRepository,
   ) {}
   async getById(id: string) {
-    const user = await this.userRepo.findOne({ id }, {populate: ["followers", "following"]});
-    console.log(user);
-    return wrap(user!).toJSON();
+    return await this.userRepo.findOne({ id }, {populate: ["followers", "following", "image"]});
   }
   async getPosts(id: string) {
     const user = await this.userRepo.findOne({ id }, { populate: ["posts"] });
@@ -20,6 +17,10 @@ export class UserService {
       throw new NotFoundException("User with id does not exist");
     }
     return user.posts;
+  }
+  async getLikes(userId: string){
+    const user = await this.userRepo.findOne({ id: userId }, { populate: ["likes"] });
+    return user?.likes;
   }
   async followUser(target: string, user: string) {
     const toFollow = await this.userRepo.findOne(
@@ -60,7 +61,13 @@ export class UserService {
       throw new NotFoundException("Media with id doesn't exist");
     }
     if (!media.mimeType.includes("image")) {
-      throw new BadRequestException("Pass id of an image");
+      throw new BadRequestException("Pass an image media");
+    }
+    if(media.owner != user){
+      throw new BadRequestException("You don't own the media");
+    }
+    if(media.post){
+      throw new BadRequestException("Media is already tied to a post");
     }
     user.image = media;
     await this.userRepo.getEntityManager().flush();

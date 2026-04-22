@@ -23,10 +23,7 @@ export class PostController {
   }
   @UseGuards(AuthGuard)
   @Post("/create")
-  async create(
-    @Body() postData: PostDataDTO,
-    @User() user: UserPayload,
-  ) {
+  async create(@Body() postData: PostDataDTO, @User() user: UserPayload) {
     return await this.service.create(postData, user.sub);
   }
   @Get("/:id")
@@ -38,8 +35,7 @@ export class PostController {
   async editPost(
     @Param("id", ParseUUIDPipe) id: string,
     @User() user: UserPayload,
-    @Body()
-    postData: PostDataDTO,
+    @Body() postData: PostDataDTO,
   ) {
     return await this.service.editPost(id, postData, user.sub);
   }
@@ -51,6 +47,15 @@ export class PostController {
     @User() user: UserPayload,
   ) {
     return await this.service.deletePost(id, user.sub);
+  }
+
+  @UseGuards(AuthGuard)
+  @Post("/:id/reply")
+  async reply(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() postData: PostDataDTO,
+    @User() user: UserPayload) {
+    return await this.service.reply(id, postData, user.sub);
   }
 
   @UseGuards(AuthGuard)
@@ -91,5 +96,12 @@ export class PostController {
     @User() user: UserPayload,
   ) {
     return await this.service.dislikePost(id, user.sub);
+  }
+
+  @Get("/:id/replies")
+  async getReplies(
+    @Param("id", ParseUUIDPipe) id: string,
+  ){
+    return await this.service.getReplies(id);
   }
 }

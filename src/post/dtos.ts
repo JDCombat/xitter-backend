@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { IsNotEmpty, IsOptional, IsUUID } from "class-validator";
+import { IsArray, IsNotEmpty, IsOptional, IsUUID, MaxLength } from "class-validator";
 
 export class PostDataDTO{
   @IsNotEmpty()
   content: string;
   @IsOptional()
-  @IsUUID()
-  mediaId?: string;
+  @IsArray()
+  @MaxLength(5)
+  @IsUUID("all", {each: true})
+  mediaIds?: string[];
 }

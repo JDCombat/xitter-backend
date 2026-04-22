@@ -15,7 +15,6 @@ export const UserSchema = defineEntity({
     password: p.string().hidden().ref().lazy(),
     image: () => p.oneToOne(MediaSchema).nullable().owner(),
     posts: () => p.oneToMany(PostSchema).mappedBy("author"),
-    reposts: () => p.manyToMany(PostSchema),
     following: () => p.manyToMany(UserSchema).inversedBy("followers").nullable(),
     followers: () => p.manyToMany(UserSchema).mappedBy("following").nullable(),
     likes: () => p.manyToMany(PostSchema).nullable(),
