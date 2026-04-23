@@ -16,7 +16,7 @@ export const PostSchema = defineEntity({
         .manyToMany(UserSchema)
         .nullable(),
     likesCount: p.formula(alias => `(select count(*) from post_likes pl where pl.post_id = ${alias.toString()}.id)`).persist(false).type(Number),
-    repostsCount: p.formula(alias => `(select count(*) from post_reposts pr where pr.post_id = ${alias.toString()}.id)`).persist(false).type(Number),
+    repostsCount: p.formula(alias => `(select count(*) from post where post.reposts_id = ${alias.toString()}.id)`).persist(false).type(Number),
     media: () =>
       p.oneToMany(MediaSchema).mappedBy("post").nullable(),
     hashtags: () =>
@@ -28,7 +28,7 @@ export const PostSchema = defineEntity({
       p
         .oneToOne(PostSchema)
         .nullable(),
-    originalPost: () => p.manyToOne(PostSchema).nullable()
+    reposts: () => p.manyToOne(PostSchema).nullable()
   },
 });
 export type IPost = InferEntity<typeof PostSchema>;

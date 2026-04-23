@@ -66,7 +66,7 @@ export class UserController {
     @Param("id", ParseUUIDPipe) id: string,
     @User() user: UserPayload,
   ) {
-    await this.service.blockUser(id, user.sub);
+    return await this.service.blockUser(id, user.sub);
   }
   @UseGuards(AuthGuard)
   @Delete("/:id/block")

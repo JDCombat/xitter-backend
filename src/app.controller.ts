@@ -1,6 +1,7 @@
 import { Body, Controller, Get, UseGuards } from "@nestjs/common";
 import { AppService } from "./app.service";
 import { AuthGuard } from "./auth.guard";
+import { User, type UserPayload } from "./user/user.decorator";
 
 @Controller()
 export class AppController {
@@ -8,7 +9,7 @@ export class AppController {
 
   @UseGuards(AuthGuard)
   @Get("/feed")
-  async getFeed() {
-    return await this.appService.getFeed();
+  async getFeed(@User() user: UserPayload) {
+    return await this.appService.getFeed(user.sub);
   }
 }

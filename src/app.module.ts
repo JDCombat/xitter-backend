@@ -7,6 +7,7 @@ import { PostModule } from "./post/post.module";
 import { AuthModule } from "./auth/auth.module";
 import { UserModule } from "./user/user.module";
 import { MediaModule } from "./media/media.module";
+import { HashtagModule } from './hashtag/hashtag.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { MediaModule } from "./media/media.module";
     AuthModule,
     UserModule,
     MediaModule,
+    HashtagModule,
   ],
   controllers: [AppController],
   providers: [AppService],

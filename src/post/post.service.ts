@@ -19,13 +19,13 @@ export class PostService {
   ) {}
   async getAll() {
     return await this.postRepo.findAll({
-      populate: ["author", "media", "repliesTo", "originalPost"],
+      populate: ["author", "media", "repliesTo", "reposts"],
     });
   }
   async getById(id: string) {
     return await this.postRepo.findOne(
       { id },
-      { populate: ["author", "media", "repliesTo", "originalPost"] },
+      { populate: ["author", "media", "repliesTo", "reposts"] },
     );
   }
   async getReplies(id: string) {
@@ -133,6 +133,23 @@ export class PostService {
     postData: { content: string; mediaIds?: string[] },
     userId: string,
   ) {
+    const user = (await this.userRepo.findOne(
+      { id: userId },
+      { populate: ["blockedUsers"] },
+    ))!;
+    const toReply = await this.postRepo.findOne(
+      { id: postId },
+      { populate: ["author", "author.blockedUsers"], fields: ["author"] },
+    );
+    if (!toReply) {
+      throw new NotFoundException("Post with id does not exist");
+    }
+    if (toReply.author.blockedUsers?.contains(user)) {
+      throw new BadRequestException("This user has blocked you");
+    }
+    if (user?.blockedUsers?.contains(toReply.author)) {
+      throw new BadRequestException("You have blocked this user");
+    }
     const post = this.postRepo.create({
       content: postData.content,
       author: userId,
@@ -174,7 +191,10 @@ export class PostService {
     return post;
   }
   async deletePost(postId: string, userId: string) {
-    const post = await this.postRepo.findOne({ id: postId });
+    const post = await this.postRepo.findOne(
+      { id: postId },
+      { fields: ["author"] },
+    );
     if (!post) {
       throw new NotFoundException("Post with id does not exist");
     }
@@ -185,19 +205,39 @@ export class PostService {
     await this.postRepo.nativeDelete(post);
   }
   async repost(postId: string, userId: string) {
-    if((await this.postRepo.count({originalPost: postId})) != 0){
+    const user = (await this.userRepo.findOne(
+      { id: userId },
+      { populate: ["blockedUsers"] },
+    ))!;
+    const toRepost = await this.postRepo.findOne(
+      { id: postId },
+      { populate: ["author", "author.blockedUsers"], fields: ["author"] },
+    );
+    if (!toRepost) {
+      throw new NotFoundException("Post with id does not exist");
+    }
+    if (toRepost.author.blockedUsers?.contains(user)) {
+      throw new BadRequestException("This user has blocked you");
+    }
+    if (user?.blockedUsers?.contains(toRepost.author)) {
+      throw new BadRequestException("You have blocked this user");
+    }
+    if ((await this.postRepo.count({ reposts: postId })) != 0) {
       throw new BadRequestException("You already reposted this");
     }
     const repost = this.postRepo.create({
-      originalPost: postId,
+      reposts: postId,
       author: userId,
     });
     await this.postRepo.getEntityManager().flush();
     return repost;
   }
   async deleteRepost(postId: string, userId: string) {
-    const repost = await this.postRepo.findOne({originalPost: postId, author: userId})
-    if(!repost){
+    const repost = await this.postRepo.findOne({
+      reposts: postId,
+      author: userId,
+    });
+    if (!repost) {
       throw new BadRequestException("You didn't repost this");
     }
     await this.postRepo.nativeDelete(repost);
@@ -213,39 +253,50 @@ export class PostService {
     return post.likes;
   }
   async likePost(postId: string, userId: string) {
-    const post = await this.postRepo.findOne({ id: postId });
-    const user = (await this.userRepo.findOne({ id: userId }))!;
-
+    const user = (await this.userRepo.findOne(
+      { id: userId },
+      { populate: ["blockedUsers"] },
+    ))!;
+    const post = await this.postRepo.findOne(
+      { id: postId },
+      { populate: ["author", "author.blockedUsers", "likes"], fields: ["author", "likes"] },
+    );
     if (!post) {
       throw new NotFoundException("Post with id does not exist");
+    }
+    if (post.author.blockedUsers?.contains(user)) {
+      throw new BadRequestException("This user has blocked you");
+    }
+    if (user?.blockedUsers?.contains(post.author)) {
+      throw new BadRequestException("You have blocked this user");
     }
 
     post.likes?.add(user);
-    user.likes?.add(post);
     await this.postRepo.getEntityManager().flush();
-    await this.userRepo.getEntityManager().flush();
     return { liked: true };
   }
   async dislikePost(postId: string, userId: string) {
-    const post = await this.postRepo.findOne(
-      { id: postId },
-      { populate: ["likes"] },
-    );
-
     const user = (await this.userRepo.findOne(
       { id: userId },
-      { populate: ["likes"] },
+      { populate: ["blockedUsers"] },
     ))!;
-
+    const post = await this.postRepo.findOne(
+      { id: postId },
+      { populate: ["author", "author.blockedUsers", "likes"], fields: ["author", "likes"] },
+    );
     if (!post) {
       throw new NotFoundException("Post with id does not exist");
     }
+    if (post.author.blockedUsers?.contains(user)) {
+      throw new BadRequestException("This user has blocked you");
+    }
+    if (user?.blockedUsers?.contains(post.author)) {
+      throw new BadRequestException("You have blocked this user");
+    }
 
     post.likes?.remove(user);
-    user.likes?.remove(post);
 
     await this.postRepo.getEntityManager().flush();
-    await this.userRepo.getEntityManager().flush();
 
     return { liked: false };
   }
