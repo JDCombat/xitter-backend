@@ -8,9 +8,9 @@ export class HashtagService {
     return await this.repo.findAll();
   }
   async getPosts(name: string){
-    return (await this.repo.findOne({name}, {populate: ["posts"], fields: ["posts"]}))?.posts
+    return (await this.repo.findOne({name}, {populate: ["posts"], fields: ["posts"]}))?.posts ?? []
   }
   async getTrending(){
-    return await this.repo.findAll({limit: 5, orderBy: {popularity: "DESC"}})
+    return await this.repo.findAll({limit: 5, orderBy: {popularity: "desc"}});
   }
 }

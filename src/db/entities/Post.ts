@@ -11,12 +11,14 @@ export const PostSchema = defineEntity({
   repository: () => PostRepository,
   properties: {
     content: p.text().length(2000).nullable(),
+    score: p.integer().persist(false),
+    likesCount: p.integer().formula(alias => `(select count(*) from post_likes pl where pl.post_id = ${alias.toString()}.id)`).persist(false).type(Number),
+    repostsCount: p.integer().formula(alias => `(select count(*) from post where post.reposts_id = ${alias.toString()}.id)`).persist(false).type(Number),
+    replyCount: p.integer().formula(alias => `(select count(*) from post where post.replies_to_id = ${alias.toString()}.id)`).persist(false).type(Number),
     likes: () =>
       p
         .manyToMany(UserSchema)
         .nullable(),
-    likesCount: p.formula(alias => `(select count(*) from post_likes pl where pl.post_id = ${alias.toString()}.id)`).persist(false).type(Number),
-    repostsCount: p.formula(alias => `(select count(*) from post where post.reposts_id = ${alias.toString()}.id)`).persist(false).type(Number),
     media: () =>
       p.oneToMany(MediaSchema).mappedBy("post").nullable(),
     hashtags: () =>

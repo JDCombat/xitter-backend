@@ -13,6 +13,7 @@ export const UserSchema = defineEntity({
     tag: p.string().unique(),
     email: p.string().unique().hidden(),
     password: p.string().hidden().ref().lazy(),
+    refresh_version: p.integer().onCreate(() => 0).hidden().lazy(),
     image: () => p.oneToOne(MediaSchema).nullable().owner(),
     posts: () => p.oneToMany(PostSchema).mappedBy("author"),
     following: () => p.manyToMany(UserSchema).inversedBy("followers").nullable(),

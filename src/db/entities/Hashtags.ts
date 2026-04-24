@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { defineEntity, p, type InferEntity } from "@mikro-orm/core";
 import { BaseEntitySchema } from "./BaseEntity";
-import { UserSchema } from "./User";
 import { HashtagRepository } from "src/db/repositories/hashtagRepository";
+import { PostSchema } from "./Post";
 
 export const HashtagSchema = defineEntity({
   name: "Hashtags",
@@ -9,8 +10,10 @@ export const HashtagSchema = defineEntity({
   repository: () => HashtagRepository,
   properties: {
     name: p.text().unique(),
-    popularity: p.decimal("number").onCreate(() => 0),
-    posts: () => p.manyToMany(UserSchema),
+    popularity: p
+      .decimal("number")
+      .onCreate(() => 0),
+    posts: () => p.manyToMany(PostSchema).mappedBy("hashtags"),
   },
 });
 export type IHashtag = InferEntity<typeof HashtagSchema>;

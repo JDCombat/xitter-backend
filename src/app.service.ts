@@ -10,9 +10,9 @@ export class AppService {
     const user = (await this.em.findOne(
       UserSchema,
       { id: userId },
-      { populate: ["mutedUsers", "blockedUsers"], fields: ["mutedUsers", "blockedUsers"] },
+      { populate: ["mutedUsers", "blockedUsers", "likes", "following"], fields: ["mutedUsers", "blockedUsers", "likes", "following"] },
     ))!;
-    return await this.em.find(
+    const posts = await this.em.find(
       PostSchema,
       {
         $and: [
@@ -22,7 +22,15 @@ export class AppService {
           { author: { $ne: userId } },
         ],
       },
-      { limit: 10, populate: ["media", "author", "author.blockedUsers"] },
+      { limit: 15, populate: ["media", "author", "author.blockedUsers"], orderBy: {createdAt: "DESC"} },
     );
+    for (const post of posts){
+      let score = 0;
+      const authorLikes = user.likes?.toArray().filter((e) => e.author.id == post.author.id).length ?? 0
+      score += authorLikes
+      score += user.following?.contains(post.author) ? 100: 0
+      post.score = score
+    }
+    return posts
   }
 }

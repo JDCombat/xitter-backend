@@ -9,19 +9,16 @@ import {
   ParseUUIDPipe,
   Post,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { MediaService } from "./media.service";
-import { AuthGuard } from "src/auth.guard";
 import { User, type UserPayload } from "src/user/user.decorator";
 
 @Controller("media")
 export class MediaController {
   constructor(private readonly service: MediaService) {}
 
-  @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor("file"))
   @Post("/upload")
   async uploadFile(

@@ -46,11 +46,23 @@ export class PostService {
         name: { $in: names },
       });
       const existingTagsMap = new Map(existingTags.map((t) => [t.name, t]));
+      const tagCountPairs = await Promise.all(
+        existingTags.map(async (t) => {
+          const count = await this.hashtagRepo.find({
+            createdAt: { $gt: new Date(Date.now() - 1000*60*60*12) }
+          });
+          console.log(count);
+          return [t.name, count.length] as [string, number];
+        })
+      );
+
+      const existingtagsPostCount = new Map(tagCountPairs);
       names?.forEach((e) => {
         let tag = existingTagsMap.get(e);
         if (!tag) {
           tag = this.hashtagRepo.create({ name: e });
         }
+        tag.popularity += existingtagsPostCount.get(e)!;
         post.hashtags?.add(tag);
       });
     }
@@ -161,12 +173,22 @@ export class PostService {
         name: { $in: names },
       });
       const existingTagsMap = new Map(existingTags.map((t) => [t.name, t]));
+      const tagCountPairs = await Promise.all(
+        existingTags.map(async (t) => {
+          const count = await this.hashtagRepo.count({
+            createdAt: { $gt: new Date(Date.now() - 432000) }
+          });
+          return [t.name, count] as [string, number];
+        })
+      );
+      const existingtagsPostCount = new Map(tagCountPairs);
       names?.forEach((e) => {
         let tag = existingTagsMap.get(e);
         if (!tag) {
           tag = this.hashtagRepo.create({ name: e });
         }
         post.hashtags?.add(tag);
+        tag.popularity += existingtagsPostCount.get(e)!;
       });
     }
     if (postData.mediaIds) {
