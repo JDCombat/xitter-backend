@@ -46,7 +46,7 @@ export class PostService {
         name: { $in: names },
       });
       const existingTagsMap = new Map(existingTags.map((t) => [t.name, t]));
-      for(const name of names){
+      for (const name of names) {
         let tag = existingTagsMap.get(name);
         if (!tag) {
           tag = this.hashtagRepo.create({ name: name });
@@ -167,7 +167,7 @@ export class PostService {
         name: { $in: names },
       });
       const existingTagsMap = new Map(existingTags.map((t) => [t.name, t]));
-      for(const name of names){
+      for (const name of names) {
         let tag = existingTagsMap.get(name);
         if (!tag) {
           tag = this.hashtagRepo.create({ name: name });
@@ -210,7 +210,7 @@ export class PostService {
     if (post.repliesTo) {
       await this.postRepo.nativeUpdate(
         { id: post.repliesTo.id },
-        { replyCount: raw("replyCount - 1") },
+        { replyCount: raw("reply_count - 1") },
       );
     }
     await this.postRepo.nativeDelete(post);
@@ -224,6 +224,9 @@ export class PostService {
         fields: ["author"],
       },
     );
+    if (toRepost?.author.id == userId) {
+      throw new BadRequestException("You can't repost your own post dumbass");
+    }
     if (!toRepost) {
       throw new NotFoundException("Post with id does not exist");
     }
@@ -247,7 +250,7 @@ export class PostService {
     await this.postRepo.getEntityManager().flush();
     await this.postRepo.nativeUpdate(
       { id: postId },
-      { repostsCount: raw("repostsCount+1") },
+      { repostsCount: raw("reposts_count+1") },
     );
     return repost;
   }
@@ -261,7 +264,7 @@ export class PostService {
     }
     await this.postRepo.nativeUpdate(
       { id: postId },
-      { repostsCount: raw("repostsCount - 1") },
+      { repostsCount: raw("reposts_count - 1") },
     );
     await this.postRepo.nativeDelete(repost);
   }
@@ -291,6 +294,9 @@ export class PostService {
         fields: ["author", "likes"],
       },
     );
+    if (post?.author == user) {
+      throw new BadRequestException("You can't like your own post dumbass");
+    }
     if (!post) {
       throw new NotFoundException("Post with id does not exist");
     }
@@ -306,7 +312,7 @@ export class PostService {
     post.likes?.add(user);
     await this.postRepo.nativeUpdate(
       { id: postId },
-      { likesCount: raw("likesCount + 1") },
+      { likesCount: raw("likes_count + 1") },
     );
     await this.postRepo.getEntityManager().flush();
     return { liked: true };
@@ -342,7 +348,7 @@ export class PostService {
     post.likes?.remove(user);
     await this.postRepo.nativeUpdate(
       { id: postId },
-      { likesCount: raw("likesCount - 1") },
+      { likesCount: raw("likes_count - 1") },
     );
     await this.postRepo.getEntityManager().flush();
     return { liked: false };

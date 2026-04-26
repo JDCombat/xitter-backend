@@ -104,15 +104,24 @@ export class AuthService {
       access_token: await this.jwt.signAsync(access_payload),
     };
   }
-  async logOut(userId: string) {
+  async logOut(req: Request, res: Response) {
+    const refresh_token = (req.cookies as { refresh_token: string })
+      .refresh_token;
+    if (!refresh_token) {
+      throw new UnauthorizedException("You already logged out");
+    }
+    const payload = await this.jwt.verifyAsync<{ id: string; version: string }>(
+      refresh_token,
+    );
     const user = await this.repo.findOne(
-      { id: userId },
-      { fields: ["*", "refresh_version"] },
+      { id: payload.id },
+      { fields: ["refresh_version"] },
     );
     if (!user) {
       throw new UnauthorizedException("You already logged out");
     }
     user.refresh_version += 1;
+    res.clearCookie("refresh_token");
     await this.repo.getEntityManager().flush();
   }
 }

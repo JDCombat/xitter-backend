@@ -23,14 +23,15 @@ export class HashtagService {
       orderBy: { popularity: "desc" },
     });
   }
-  async refresh(){
+  async refresh() {
     const tags = await this.repo.findAll();
-    for (const tag of tags){
+    for (const tag of tags) {
       const pastHour = await this.repo.countFromPastHour(tag.name);
       const avg = await this.repo.avgCountFromPastDay(tag.name);
       const unique = await this.repo.uniqueUsers(tag.name);
-      tag.popularity = pastHour / (avg+1) * (unique + 1)
+      tag.popularity = (pastHour / (avg + 1)) * Math.log2(unique + 1);
     }
-    return {refreshed: true}
+    await this.repo.getEntityManager().flush();
+    return { refreshed: true };
   }
 }

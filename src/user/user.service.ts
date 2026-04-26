@@ -21,7 +21,16 @@ export class UserService {
   async getPosts(id: string) {
     const user = await this.userRepo.findOne(
       { id },
-      { populate: ["posts"], fields: ["posts"] },
+      {
+        populate: [
+          "posts",
+          "posts.media",
+          "posts.author",
+          "posts.repliesTo",
+          "posts.reposts",
+        ],
+        fields: ["posts"],
+      },
     );
     if (!user) {
       throw new NotFoundException("User with id does not exist");
@@ -63,6 +72,9 @@ export class UserService {
     return user;
   }
   async followUser(targetId: string, userId: string) {
+    if (targetId == userId) {
+      throw new BadRequestException("You can't follow yourself dumbass");
+    }
     const toFollow = await this.userRepo.findOne(
       { id: targetId },
       { populate: ["blockedUsers"], populateWhere: { id: userId } },
@@ -88,6 +100,9 @@ export class UserService {
     return { following: true };
   }
   async unfollowUser(targetId: string, userId: string) {
+    if (targetId == userId) {
+      throw new BadRequestException("You can't unfollow yourself dumbass");
+    }
     const toUnfollow = await this.userRepo.findOne(
       { id: targetId },
       { populate: ["blockedUsers"], populateWhere: { id: userId } },
@@ -114,6 +129,9 @@ export class UserService {
   }
 
   async blockUser(blockId: string, userId: string) {
+    if (blockId == userId) {
+      throw new BadRequestException("You can't block yourself dumbass");
+    }
     const user = await this.userRepo.findOne(
       { id: userId },
       {
@@ -126,12 +144,18 @@ export class UserService {
     if (!userToBlock) {
       throw new NotFoundException("User with id does not exist");
     }
+    if (user?.blockedUsers?.contains(userToBlock)) {
+      throw new BadRequestException("You already blocked this user");
+    }
     user!.blockedUsers?.add(userToBlock);
     user?.following?.remove(userToBlock);
     await this.userRepo.getEntityManager().flush();
     return { blocked: true };
   }
   async unblockUser(blockId: string, userId: string) {
+    if (blockId == userId) {
+      throw new BadRequestException("You can't unblock yourself dumbass");
+    }
     const user = await this.userRepo.findOne(
       { id: userId },
       {
@@ -144,7 +168,10 @@ export class UserService {
     if (!userToUnblock) {
       throw new NotFoundException("User with id does not exist");
     }
-    user!.blockedUsers?.remove(userToUnblock);
+    if (!user?.blockedUsers?.contains(userToUnblock)) {
+      throw new BadRequestException("You haven't blocked this user");
+    }
+    user.blockedUsers?.remove(userToUnblock);
     await this.userRepo.getEntityManager().flush();
     return { blocked: false };
   }

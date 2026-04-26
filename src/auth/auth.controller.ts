@@ -2,7 +2,6 @@ import { Body, Controller, Post, Req, Res } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { SignInDTO, SignUpDTO } from "./dtos";
 import { type Response, type Request } from "express";
-import { User, type UserPayload } from "src/user/user.decorator";
 
 @Controller("auth")
 export class AuthController {
@@ -34,7 +33,7 @@ export class AuthController {
     return await this.authService.refreshToken(req, res);
   }
   @Post("/logout")
-  async logOut(@User() user: UserPayload) {
-    return await this.authService.logOut(user.sub);
+  async logOut(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return await this.authService.logOut(req, res);
   }
 }
