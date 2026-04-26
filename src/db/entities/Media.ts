@@ -19,7 +19,7 @@ export const MediaSchema = defineEntity({
 class Media extends MediaSchema.class {
   get url(): string {
     return `${process.env.SERVER_ROOT}/media/${this.name}`;
-  } 
+  }
 }
-MediaSchema.setClass(Media)
+MediaSchema.setClass(Media);
 export type IMedia = InferEntity<typeof MediaSchema>;

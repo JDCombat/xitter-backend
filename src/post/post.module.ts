@@ -9,7 +9,14 @@ import { MediaSchema } from "src/db/entities/Media";
 
 @Module({
   controllers: [PostController],
-  imports: [MikroOrmModule.forFeature([PostSchema, HashtagSchema, UserSchema, MediaSchema])],
+  imports: [
+    MikroOrmModule.forFeature([
+      PostSchema,
+      HashtagSchema,
+      UserSchema,
+      MediaSchema,
+    ]),
+  ],
   providers: [PostService],
 })
 export class PostModule {}

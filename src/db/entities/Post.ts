@@ -11,26 +11,15 @@ export const PostSchema = defineEntity({
   repository: () => PostRepository,
   properties: {
     content: p.text().length(2000).nullable(),
-    score: p.integer().persist(false),
-    likesCount: p.integer().formula(alias => `(select count(*) from post_likes pl where pl.post_id = ${alias.toString()}.id)`).persist(false).type(Number),
-    repostsCount: p.integer().formula(alias => `(select count(*) from post where post.reposts_id = ${alias.toString()}.id)`).persist(false).type(Number),
-    replyCount: p.integer().formula(alias => `(select count(*) from post where post.replies_to_id = ${alias.toString()}.id)`).persist(false).type(Number),
-    likes: () =>
-      p
-        .manyToMany(UserSchema)
-        .nullable(),
-    media: () =>
-      p.oneToMany(MediaSchema).mappedBy("post").nullable(),
-    hashtags: () =>
-      p
-        .manyToMany(HashtagSchema)
-        .nullable(),
+    likesCount: p.integer().default(0),
+    repostsCount: p.integer().default(0),
+    replyCount: p.integer().default(0),
+    likes: () => p.manyToMany(UserSchema).nullable(),
+    media: () => p.oneToMany(MediaSchema).mappedBy("post").nullable(),
+    hashtags: () => p.manyToMany(HashtagSchema).nullable(),
     author: () => p.manyToOne(UserSchema),
-    repliesTo: () =>
-      p
-        .oneToOne(PostSchema)
-        .nullable(),
-    reposts: () => p.manyToOne(PostSchema).nullable()
+    repliesTo: () => p.manyToOne(PostSchema).nullable(),
+    reposts: () => p.manyToOne(PostSchema).nullable(),
   },
 });
 export type IPost = InferEntity<typeof PostSchema>;

@@ -1,19 +1,26 @@
-import { Controller, Get, Param } from '@nestjs/common';
-import { HashtagService } from './hashtag.service';
+import { Controller, Get, Param, UseGuards } from "@nestjs/common";
+import { HashtagService } from "./hashtag.service";
+import { type Request } from "express";
+import { RefreshGuard } from "src/refresh.guard";
 
-@Controller('hashtag')
+@Controller("hashtag")
 export class HashtagController {
-  constructor(private readonly service: HashtagService){}
+  constructor(private readonly service: HashtagService) {}
   @Get("/all")
-  async getAll(){
+  async getAll() {
     return await this.service.getAll();
   }
   @Get("/trending")
-  async getTrending(){
+  async getTrending() {
     return await this.service.getTrending();
   }
-  @Get("/:name")
-  async getByName(@Param("name") name: string){
+  @UseGuards(RefreshGuard)
+  @Get("/refresh")
+  async refreshHashtags(){
+    return await this.service.refresh();
+  }
+  @Get("/name/:name")
+  async getByName(@Param("name") name: string) {
     return await this.service.getPosts(name);
   }
 }

@@ -32,7 +32,7 @@ export class UserController {
 
   @UseGuards(AuthGuard)
   @Get("/likes")
-  async getUserLikes(@User() user: UserPayload){
+  async getUserLikes(@User() user: UserPayload) {
     return this.service.getLikes(user.sub);
   }
 
@@ -92,6 +92,4 @@ export class UserController {
   ) {
     return await this.service.unmuteUser(id, user.sub);
   }
-
-
 }

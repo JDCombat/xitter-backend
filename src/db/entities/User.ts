@@ -13,12 +13,17 @@ export const UserSchema = defineEntity({
     tag: p.string().unique(),
     email: p.string().unique().hidden(),
     password: p.string().hidden().ref().lazy(),
-    refresh_version: p.integer().onCreate(() => 0).hidden().lazy(),
+    refresh_version: p
+      .integer()
+      .onCreate(() => 0)
+      .hidden()
+      .lazy(),
     image: () => p.oneToOne(MediaSchema).nullable().owner(),
     posts: () => p.oneToMany(PostSchema).mappedBy("author"),
-    following: () => p.manyToMany(UserSchema).inversedBy("followers").nullable(),
+    following: () =>
+      p.manyToMany(UserSchema).inversedBy("followers").nullable(),
     followers: () => p.manyToMany(UserSchema).mappedBy("following").nullable(),
-    likes: () => p.manyToMany(PostSchema).nullable(),
+    likes: () => p.manyToMany(PostSchema).mappedBy("likes").nullable(),
     blockedUsers: () => p.manyToMany(UserSchema).nullable(),
     mutedUsers: () => p.manyToMany(UserSchema).nullable(),
   },

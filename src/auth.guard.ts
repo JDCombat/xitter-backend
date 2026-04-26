@@ -6,10 +6,15 @@ import {
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Request } from "express";
+import { EntityManager } from "@mikro-orm/postgresql";
+import { UserSchema } from "./db/entities/User";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly em: EntityManager,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -22,6 +27,7 @@ export class AuthGuard implements CanActivate {
         sub: string;
         username: string;
       }>(token);
+      await this.em.findOneOrFail(UserSchema, { id: payload.sub });
       request["user"] = payload;
     } catch {
       throw new UnauthorizedException();

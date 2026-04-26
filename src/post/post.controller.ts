@@ -54,7 +54,8 @@ export class PostController {
   async reply(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() postData: PostDataDTO,
-    @User() user: UserPayload) {
+    @User() user: UserPayload,
+  ) {
     return await this.service.reply(id, postData, user.sub);
   }
 
@@ -99,9 +100,7 @@ export class PostController {
   }
 
   @Get("/:id/replies")
-  async getReplies(
-    @Param("id", ParseUUIDPipe) id: string,
-  ){
+  async getReplies(@Param("id", ParseUUIDPipe) id: string) {
     return await this.service.getReplies(id);
   }
 }

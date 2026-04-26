@@ -1,0 +1,1 @@
+* * * * * . /opt/app/xitter-backend/.env; curl -H "Authorization: ${CRON_TOKEN}" ${SERVER_ROOT}/hashtag/refresh >> /opt/app/uploads/xitter.log

@@ -35,48 +35,6 @@ export class UserService {
     );
     return user?.likes;
   }
-  async followUser(targetId: string, userId: string) {
-    const toFollow = await this.userRepo.findOne(
-      { id: targetId },
-      { populate: ["blockedUsers"] },
-    );
-    const user = await this.userRepo.findOne(
-      { id: userId },
-      { populate: ["following", "blockedUsers"] },
-    );
-    if (!toFollow) {
-      throw new NotFoundException("User with id does not exist");
-    }
-    if (user?.blockedUsers?.contains(toFollow)) {
-      throw new BadRequestException("You blocked this user");
-    }
-    if (toFollow?.blockedUsers?.contains(user!)) {
-      throw new BadRequestException("You blocked this user");
-    }
-    user!.following?.add(toFollow);
-    await this.userRepo.getEntityManager().flush();
-  }
-  async unfollowUser(targetId: string, userId: string) {
-    const toUnfollow = await this.userRepo.findOne(
-      { id: targetId },
-      { populate: ["blockedUsers"] },
-    );
-    const user = await this.userRepo.findOne(
-      { id: userId },
-      { populate: ["following", "blockedUsers"] },
-    );
-    if (!toUnfollow) {
-      throw new NotFoundException("User with id does not exist");
-    }
-    if (user?.blockedUsers?.contains(toUnfollow)) {
-      throw new BadRequestException("You blocked this user");
-    }
-    if (toUnfollow?.blockedUsers?.contains(user!)) {
-      throw new BadRequestException("You blocked this user");
-    }
-    user!.following?.remove(toUnfollow);
-    await this.userRepo.getEntityManager().flush();
-  }
   async changeProfilePicture(userId: string, mediaId: string) {
     const user = (await this.userRepo.findOne({ id: userId }))!;
     const media = await this.mediaRepo.findOne(
@@ -104,10 +62,65 @@ export class UserService {
     await this.userRepo.getEntityManager().flush();
     return user;
   }
+  async followUser(targetId: string, userId: string) {
+    const toFollow = await this.userRepo.findOne(
+      { id: targetId },
+      { populate: ["blockedUsers"], populateWhere: { id: userId } },
+    );
+    const user = await this.userRepo.findOne(
+      { id: userId },
+      {
+        populate: ["following:ref", "blockedUsers"],
+        populateWhere: { id: targetId },
+      },
+    );
+    if (!toFollow) {
+      throw new NotFoundException("User with id does not exist");
+    }
+    if (user?.blockedUsers?.contains(toFollow)) {
+      throw new BadRequestException("You blocked this user");
+    }
+    if (toFollow?.blockedUsers?.contains(user!)) {
+      throw new BadRequestException("This user blocked you");
+    }
+    user!.following?.add(toFollow);
+    await this.userRepo.getEntityManager().flush();
+    return { following: true };
+  }
+  async unfollowUser(targetId: string, userId: string) {
+    const toUnfollow = await this.userRepo.findOne(
+      { id: targetId },
+      { populate: ["blockedUsers"], populateWhere: { id: userId } },
+    );
+    const user = await this.userRepo.findOne(
+      { id: userId },
+      {
+        populate: ["following", "blockedUsers"],
+        populateWhere: { id: targetId },
+      },
+    );
+    if (!toUnfollow) {
+      throw new NotFoundException("User with id does not exist");
+    }
+    if (user?.blockedUsers?.contains(toUnfollow)) {
+      throw new BadRequestException("You blocked this user");
+    }
+    if (toUnfollow?.blockedUsers?.contains(user!)) {
+      throw new BadRequestException("This user blocked you");
+    }
+    user!.following?.remove(toUnfollow);
+    await this.userRepo.getEntityManager().flush();
+    return { following: false };
+  }
+
   async blockUser(blockId: string, userId: string) {
     const user = await this.userRepo.findOne(
       { id: userId },
-      { populate: ["blockedUsers"], fields: ["blockedUsers", "following"] },
+      {
+        populate: ["blockedUsers:ref", "following"],
+        populateWhere: { id: blockId },
+        fields: ["blockedUsers", "following"],
+      },
     );
     const userToBlock = this.userRepo.getReference(blockId);
     if (!userToBlock) {
@@ -121,7 +134,11 @@ export class UserService {
   async unblockUser(blockId: string, userId: string) {
     const user = await this.userRepo.findOne(
       { id: userId },
-      { populate: ["blockedUsers"], fields: ["blockedUsers"] },
+      {
+        populate: ["blockedUsers"],
+        populateWhere: { id: blockId },
+        fields: ["blockedUsers"],
+      },
     );
     const userToUnblock = this.userRepo.getReference(blockId);
     if (!userToUnblock) {
@@ -134,7 +151,7 @@ export class UserService {
   async muteUser(muteId: string, userId: string) {
     const user = await this.userRepo.findOne(
       { id: userId },
-      { populate: ["mutedUsers"], fields: ["mutedUsers"] },
+      { populate: ["mutedUsers:ref"], fields: ["mutedUsers"] },
     );
     const userToMute = this.userRepo.getReference(muteId);
     if (!userToMute) {
@@ -147,13 +164,17 @@ export class UserService {
   async unmuteUser(muteId: string, userId: string) {
     const user = await this.userRepo.findOne(
       { id: userId },
-      { populate: ["mutedUsers"], fields: ["mutedUsers"] },
+      {
+        populate: ["mutedUsers"],
+        populateWhere: { id: muteId },
+        fields: ["mutedUsers"],
+      },
     );
     const userToMute = this.userRepo.getReference(muteId);
     if (!userToMute) {
       throw new NotFoundException("User with id does not exist");
     }
-    user!.mutedUsers?.add(userToMute);
+    user!.mutedUsers?.remove(userToMute);
     await this.userRepo.getEntityManager().flush();
     return { muted: false };
   }

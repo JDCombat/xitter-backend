@@ -80,15 +80,18 @@ export class AuthService {
     }
     const payload = await this.jwt.verifyAsync<{
       id: string;
-      refresh_version: number;
+      version: number;
     }>(refresh_token);
-    const user = await this.repo.findOne({ id: payload.id });
-    if (payload.refresh_version != user?.refresh_version) {
+    const user = await this.repo.findOne(
+      { id: payload.id },
+      { fields: ["name", "refresh_version"] },
+    );
+    if (payload.version != user?.refresh_version) {
       throw new UnauthorizedException("You already logged out");
     }
     const access_payload = { sub: user.id, username: user.name };
     const refresh_token_update = await this.jwt.signAsync(
-      { id: user.id, refresh_token: user.refresh_version },
+      { id: user.id, version: user.refresh_version },
       { expiresIn: "7d" },
     );
     res.cookie("refresh_token", refresh_token_update, {

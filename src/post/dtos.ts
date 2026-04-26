@@ -1,12 +1,17 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-import { ArrayMaxSize, IsArray, IsNotEmpty, IsOptional, IsUUID, MaxLength } from "class-validator";
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+} from "class-validator";
 
-export class PostDataDTO{
+export class PostDataDTO {
   @IsNotEmpty()
   content: string;
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(5)
-  @IsUUID("all", {each: true})
+  @IsUUID("all", { each: true })
   mediaIds?: string[];
 }

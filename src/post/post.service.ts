@@ -1,3 +1,4 @@
+import { raw } from "@mikro-orm/postgresql";
 import {
   BadRequestException,
   ForbiddenException,
@@ -35,36 +36,23 @@ export class PostService {
     postData: { content: string; mediaIds?: string[] },
     userId: string,
   ) {
-    console.log(postData);
     const post = this.postRepo.create({
       content: postData.content,
       author: userId,
     });
     const names = postData.content.match(/#(\w+)/g)?.map((e) => e.slice(1));
-    if (names?.length ?? 0 > 0) {
+    if (names && names?.length > 0) {
       const existingTags = await this.hashtagRepo.find({
         name: { $in: names },
       });
       const existingTagsMap = new Map(existingTags.map((t) => [t.name, t]));
-      const tagCountPairs = await Promise.all(
-        existingTags.map(async (t) => {
-          const count = await this.hashtagRepo.find({
-            createdAt: { $gt: new Date(Date.now() - 1000*60*60*12) }
-          });
-          console.log(count);
-          return [t.name, count.length] as [string, number];
-        })
-      );
-
-      const existingtagsPostCount = new Map(tagCountPairs);
-      names?.forEach((e) => {
-        let tag = existingTagsMap.get(e);
+      for(const name of names){
+        let tag = existingTagsMap.get(name);
         if (!tag) {
-          tag = this.hashtagRepo.create({ name: e });
+          tag = this.hashtagRepo.create({ name: name });
         }
-        tag.popularity += existingtagsPostCount.get(e)!;
         post.hashtags?.add(tag);
-      });
+      }
     }
     if (postData.mediaIds) {
       const media = await this.mediaRepo.find({
@@ -74,7 +62,6 @@ export class PostService {
         throw new BadRequestException("Media with one of ids does not exist");
       }
       const user = await this.userRepo.findOne({ id: userId });
-      console.log(media);
       media.forEach((e) => {
         if (e.owner != user!) {
           throw new BadRequestException("You don't own one of the media");
@@ -106,7 +93,7 @@ export class PostService {
       post.content = postData.content;
       post.hashtags?.removeAll();
       const names = postData.content.match(/#(\w+)/g)?.map((e) => e.slice(1));
-      if (names?.length ?? 0 > 0) {
+      if (names && names.length > 0) {
         const existingTags = await this.hashtagRepo.find({
           name: { $in: names },
         });
@@ -145,17 +132,24 @@ export class PostService {
     postData: { content: string; mediaIds?: string[] },
     userId: string,
   ) {
-    const user = (await this.userRepo.findOne(
-      { id: userId },
-      { populate: ["blockedUsers"] },
-    ))!;
     const toReply = await this.postRepo.findOne(
       { id: postId },
-      { populate: ["author", "author.blockedUsers"], fields: ["author"] },
+      {
+        populate: ["author", "author.blockedUsers"],
+        fields: ["author", "replyCount"],
+        populateWhere: { author: { blockedUsers: { id: userId } } },
+      },
     );
     if (!toReply) {
       throw new NotFoundException("Post with id does not exist");
     }
+    const user = (await this.userRepo.findOne(
+      { id: userId },
+      {
+        populate: ["blockedUsers"],
+        populateWhere: { blockedUsers: { id: toReply.author.id } },
+      },
+    ))!;
     if (toReply.author.blockedUsers?.contains(user)) {
       throw new BadRequestException("This user has blocked you");
     }
@@ -168,28 +162,18 @@ export class PostService {
       repliesTo: postId,
     });
     const names = postData.content.match(/#(\w+)/g)?.map((e) => e.slice(1));
-    if (names?.length ?? 0 > 0) {
+    if (names && names.length > 0) {
       const existingTags = await this.hashtagRepo.find({
         name: { $in: names },
       });
       const existingTagsMap = new Map(existingTags.map((t) => [t.name, t]));
-      const tagCountPairs = await Promise.all(
-        existingTags.map(async (t) => {
-          const count = await this.hashtagRepo.count({
-            createdAt: { $gt: new Date(Date.now() - 432000) }
-          });
-          return [t.name, count] as [string, number];
-        })
-      );
-      const existingtagsPostCount = new Map(tagCountPairs);
-      names?.forEach((e) => {
-        let tag = existingTagsMap.get(e);
+      for(const name of names){
+        let tag = existingTagsMap.get(name);
         if (!tag) {
-          tag = this.hashtagRepo.create({ name: e });
+          tag = this.hashtagRepo.create({ name: name });
         }
         post.hashtags?.add(tag);
-        tag.popularity += existingtagsPostCount.get(e)!;
-      });
+      }
     }
     if (postData.mediaIds) {
       const media = await this.mediaRepo.find({
@@ -199,7 +183,6 @@ export class PostService {
         throw new BadRequestException("Media with one of ids does not exist");
       }
       const user = await this.userRepo.findOne({ id: userId });
-      console.log(media);
       media.forEach((e) => {
         if (e.owner != user!) {
           throw new BadRequestException("You don't own one of the media");
@@ -207,6 +190,7 @@ export class PostService {
         post.media?.add(e);
       });
     }
+    toReply.replyCount += 1;
     await this.hashtagRepo.getEntityManager().flush();
     await this.postRepo.getEntityManager().flush();
 
@@ -215,7 +199,7 @@ export class PostService {
   async deletePost(postId: string, userId: string) {
     const post = await this.postRepo.findOne(
       { id: postId },
-      { fields: ["author"] },
+      { fields: ["author", "repliesTo"], populate: ["repliesTo:ref"] },
     );
     if (!post) {
       throw new NotFoundException("Post with id does not exist");
@@ -223,21 +207,30 @@ export class PostService {
     if (post.author.id != userId) {
       throw new ForbiddenException("You don't have permissions to this post");
     }
-
+    if (post.repliesTo) {
+      await this.postRepo.nativeUpdate(
+        { id: post.repliesTo.id },
+        { replyCount: raw("replyCount - 1") },
+      );
+    }
     await this.postRepo.nativeDelete(post);
   }
   async repost(postId: string, userId: string) {
-    const user = (await this.userRepo.findOne(
-      { id: userId },
-      { populate: ["blockedUsers"] },
-    ))!;
     const toRepost = await this.postRepo.findOne(
       { id: postId },
-      { populate: ["author", "author.blockedUsers"], fields: ["author"] },
+      {
+        populate: ["author", "author.blockedUsers"],
+        populateWhere: { author: { blockedUsers: { id: userId } } },
+        fields: ["author"],
+      },
     );
     if (!toRepost) {
       throw new NotFoundException("Post with id does not exist");
     }
+    const user = (await this.userRepo.findOne(
+      { id: userId },
+      { populate: ["blockedUsers"], populateWhere: { id: toRepost.author.id } },
+    ))!;
     if (toRepost.author.blockedUsers?.contains(user)) {
       throw new BadRequestException("This user has blocked you");
     }
@@ -252,6 +245,10 @@ export class PostService {
       author: userId,
     });
     await this.postRepo.getEntityManager().flush();
+    await this.postRepo.nativeUpdate(
+      { id: postId },
+      { repostsCount: raw("repostsCount+1") },
+    );
     return repost;
   }
   async deleteRepost(postId: string, userId: string) {
@@ -262,6 +259,10 @@ export class PostService {
     if (!repost) {
       throw new BadRequestException("You didn't repost this");
     }
+    await this.postRepo.nativeUpdate(
+      { id: postId },
+      { repostsCount: raw("repostsCount - 1") },
+    );
     await this.postRepo.nativeDelete(repost);
   }
   async getPostLikes(postId: string) {
@@ -281,7 +282,14 @@ export class PostService {
     ))!;
     const post = await this.postRepo.findOne(
       { id: postId },
-      { populate: ["author", "author.blockedUsers", "likes"], fields: ["author", "likes"] },
+      {
+        populate: ["author", "author.blockedUsers", "likes:ref"],
+        populateWhere: {
+          author: { blockedUsers: { id: userId } },
+          likes: { id: userId },
+        },
+        fields: ["author", "likes"],
+      },
     );
     if (!post) {
       throw new NotFoundException("Post with id does not exist");
@@ -292,8 +300,14 @@ export class PostService {
     if (user?.blockedUsers?.contains(post.author)) {
       throw new BadRequestException("You have blocked this user");
     }
-
+    if (post.likes?.contains(user)) {
+      throw new BadRequestException("You already liked this post");
+    }
     post.likes?.add(user);
+    await this.postRepo.nativeUpdate(
+      { id: postId },
+      { likesCount: raw("likesCount + 1") },
+    );
     await this.postRepo.getEntityManager().flush();
     return { liked: true };
   }
@@ -304,7 +318,14 @@ export class PostService {
     ))!;
     const post = await this.postRepo.findOne(
       { id: postId },
-      { populate: ["author", "author.blockedUsers", "likes"], fields: ["author", "likes"] },
+      {
+        populate: ["author", "author.blockedUsers", "likes"],
+        populateWhere: {
+          author: { blockedUsers: { id: userId } },
+          likes: { id: userId },
+        },
+        fields: ["author", "likes"],
+      },
     );
     if (!post) {
       throw new NotFoundException("Post with id does not exist");
@@ -315,11 +336,15 @@ export class PostService {
     if (user?.blockedUsers?.contains(post.author)) {
       throw new BadRequestException("You have blocked this user");
     }
-
+    if (!post.likes?.contains(user)) {
+      throw new BadRequestException("You haven't liked this post");
+    }
     post.likes?.remove(user);
-
+    await this.postRepo.nativeUpdate(
+      { id: postId },
+      { likesCount: raw("likesCount - 1") },
+    );
     await this.postRepo.getEntityManager().flush();
-
     return { liked: false };
   }
 }

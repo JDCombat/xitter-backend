@@ -21,11 +21,16 @@ export class MediaService {
     return wrap(media);
   }
   async getFile(id: string) {
-    const file = await this.repo.findOne({ id }, {fields: ["name", "mimeType"]});
+    const file = await this.repo.findOne(
+      { id },
+      { fields: ["name", "mimeType"] },
+    );
     if (!file) {
       throw new NotFoundException("File with id does not exist");
     }
-    const stream = createReadStream(path.join(process.cwd(), "uploads", file.name));
+    const stream = createReadStream(
+      path.join(process.cwd(), "uploads", file.name),
+    );
     return new StreamableFile(stream, {
       type: file.mimeType,
     });
