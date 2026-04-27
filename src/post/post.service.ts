@@ -17,16 +17,16 @@ export class PostService {
     private readonly hashtagRepo: HashtagRepository,
     private readonly userRepo: UserRepository,
     private readonly mediaRepo: MediaRepository,
-  ) {}
+  ) { }
   async getAll() {
     return await this.postRepo.findAll({
-      populate: ["author", "media", "repliesTo", "reposts"],
+      populate: ["author", "media", "repliesTo", "reposts", "hashtags"],
     });
   }
   async getById(id: string) {
     return await this.postRepo.findOne(
       { id },
-      { populate: ["author", "media", "repliesTo", "reposts"] },
+      { populate: ["author", "media", "repliesTo", "reposts", "hashtags"] },
     );
   }
   async getReplies(id: string) {
@@ -315,7 +315,6 @@ export class PostService {
       { likesCount: raw("likes_count + 1") },
     );
     await this.postRepo.getEntityManager().flush();
-    return { liked: true };
   }
   async dislikePost(postId: string, userId: string) {
     const user = (await this.userRepo.findOne(
@@ -351,6 +350,5 @@ export class PostService {
       { likesCount: raw("likes_count - 1") },
     );
     await this.postRepo.getEntityManager().flush();
-    return { liked: false };
   }
 }

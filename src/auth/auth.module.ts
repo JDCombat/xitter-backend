@@ -4,10 +4,11 @@ import { AuthService } from "./auth.service";
 import { AuthController } from "./auth.controller";
 import { UserSchema } from "src/db/entities/User";
 import { MikroOrmModule } from "@mikro-orm/nestjs";
+import { MediaSchema } from "src/db/entities/Media";
 
 @Module({
   imports: [
-    MikroOrmModule.forFeature([UserSchema]),
+    MikroOrmModule.forFeature([UserSchema, MediaSchema]),
     JwtModule.register({
       global: true,
       secret: process.env.JWTSECRET,

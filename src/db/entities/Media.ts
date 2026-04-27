@@ -13,12 +13,12 @@ export const MediaSchema = defineEntity({
     url: p.text().persist(false).getter(true),
     mimeType: p.text(),
     post: () => p.manyToOne(PostSchema).nullable().hidden(),
-    owner: () => p.manyToOne(UserSchema),
+    owner: () => p.manyToOne(UserSchema).nullable(),
   },
 });
 class Media extends MediaSchema.class {
   get url(): string {
-    return `${process.env.SERVER_ROOT}/media/${this.name}`;
+    return `${process.env.SERVER_ROOT}/media/${this.id}`;
   }
 }
 MediaSchema.setClass(Media);

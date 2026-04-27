@@ -7,7 +7,7 @@ export const BaseEntitySchema = defineEntity({
       .uuid()
       .primary()
       .onCreate(() => crypto.randomUUID()),
-    createdAt: p.datetime().onCreate(() => new Date()),
+    createdAt: p.datetime().onCreate(() => new Date()).hidden(),
     updatedAt: p
       .datetime()
       .onCreate(() => new Date())

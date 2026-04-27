@@ -10,8 +10,8 @@ COPY . .
 
 RUN mkdir uploads
 
-ENV PORT=80
+ENV PORT=3000
 
-EXPOSE 80
+EXPOSE 3000
 
 CMD ["npm", "run", "start"]

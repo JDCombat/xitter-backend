@@ -1,8 +1,11 @@
+import { EntityManager } from "@mikro-orm/postgresql";
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { IPost, PostSchema } from "src/db/entities/Post";
+import { UserSchema } from "src/db/entities/User";
 import { MediaRepository } from "src/db/repositories/MediaRepository";
 import { UserRepository } from "src/db/repositories/userRepository";
 
@@ -11,6 +14,7 @@ export class UserService {
   constructor(
     private readonly userRepo: UserRepository,
     private readonly mediaRepo: MediaRepository,
+    private readonly em: EntityManager
   ) {}
   async getById(id: string) {
     return await this.userRepo.findOne(
@@ -97,7 +101,6 @@ export class UserService {
     }
     user!.following?.add(toFollow);
     await this.userRepo.getEntityManager().flush();
-    return { following: true };
   }
   async unfollowUser(targetId: string, userId: string) {
     if (targetId == userId) {
@@ -125,7 +128,6 @@ export class UserService {
     }
     user!.following?.remove(toUnfollow);
     await this.userRepo.getEntityManager().flush();
-    return { following: false };
   }
 
   async blockUser(blockId: string, userId: string) {
@@ -150,7 +152,6 @@ export class UserService {
     user!.blockedUsers?.add(userToBlock);
     user?.following?.remove(userToBlock);
     await this.userRepo.getEntityManager().flush();
-    return { blocked: true };
   }
   async unblockUser(blockId: string, userId: string) {
     if (blockId == userId) {
@@ -173,7 +174,6 @@ export class UserService {
     }
     user.blockedUsers?.remove(userToUnblock);
     await this.userRepo.getEntityManager().flush();
-    return { blocked: false };
   }
   async muteUser(muteId: string, userId: string) {
     const user = await this.userRepo.findOne(
@@ -186,7 +186,6 @@ export class UserService {
     }
     user!.mutedUsers?.add(userToMute);
     await this.userRepo.getEntityManager().flush();
-    return { muted: true };
   }
   async unmuteUser(muteId: string, userId: string) {
     const user = await this.userRepo.findOne(
@@ -203,6 +202,73 @@ export class UserService {
     }
     user!.mutedUsers?.remove(userToMute);
     await this.userRepo.getEntityManager().flush();
-    return { muted: false };
+  }
+  async getFollowers(userId: string){
+    const followers = await this.userRepo.findOne({id: userId}, {populate: ["followers", "followers.image"], fields: ["followers"]})
+    return followers?.followers;
+  }
+  async getFollowing(userId: string){
+    const following = await this.userRepo.findOne({id: userId}, {populate: ["following", "following.image"], fields: ["following"]})
+    return following?.following;
+  }
+  async getFeed(userId: string) {
+    const user = (await this.em.findOne(
+      UserSchema,
+      { id: userId },
+      {
+        populate: [
+          "mutedUsers",
+          "blockedUsers",
+          "likes",
+          "following",
+          "likes.author",
+        ],
+        fields: ["mutedUsers", "blockedUsers", "likes", "following"],
+      },
+    ))!;
+    const posts = await this.em.find(
+      PostSchema,
+      {
+        $and: [
+          { author: { id: { $nin: user.mutedUsers?.getIdentifiers() } } },
+          { author: { id: { $nin: user.blockedUsers?.getIdentifiers() } } },
+          { author: { blockedUsers: { $none: userId } } },
+          { author: { $ne: userId } },
+        ],
+      },
+      {
+        populate: ["media", "author", "author.blockedUsers", "hashtags", "reposts", "repliesTo"],
+        populateWhere: { author: { blockedUsers: userId } },
+        orderBy: { createdAt: "DESC" },
+      },
+    );
+    const array: { score: number; post: IPost }[] = [];
+    for (const post of posts) {
+      const gravity = 2;
+      const max_bonus = 50;
+      const threshold = 10;
+      let base_score = 1;
+
+      base_score += post.likesCount;
+      base_score += post.replyCount * 3;
+      base_score += post.repostsCount * 5;
+
+      const authorLikes =
+        user.likes?.filter((e) => e.author.id == post.author.id).length ?? 0;
+      const likesBonus =
+        (max_bonus * Math.pow(authorLikes, 2)) /
+        (threshold + Math.pow(authorLikes, 2));
+
+      base_score += likesBonus;
+      base_score += user.following?.contains(post.author) ? 100 : 0;
+
+      const ageHours =
+        (Date.now() - post.createdAt.getTime()) / (1000 * 60 * 60);
+      const finalScore = base_score / Math.pow(ageHours + 2, gravity);
+
+      array.push({ score: finalScore, post });
+    }
+    array.sort((e, j) => j.score - e.score);
+    return array;
   }
 }

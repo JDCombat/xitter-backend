@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -7,15 +8,36 @@ import { JwtService } from "@nestjs/jwt";
 import { UserRepository } from "src/db/repositories/userRepository";
 import bcrypt from "bcrypt";
 import { Request, Response } from "express";
+import { MediaRepository } from "src/db/repositories/MediaRepository";
+import { IMedia } from "src/db/entities/Media";
+import { MailerService } from "@nestjs-modules/mailer";
+import { createHash, randomBytes } from "crypto";
+import { ChangePassDTO } from "./dtos";
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly jwt: JwtService,
-    private readonly repo: UserRepository,
+    private readonly userRepo: UserRepository,
+    private readonly mediaRepo: MediaRepository,
+    private readonly mailer: MailerService
   ) {}
-  async signIn(login: string, password: string, res: Response) {
-    const user = await this.repo.findOne(
+  async getPreRegisterToken(req: Request) {
+    if((req.cookies as {refresh_token: string}).refresh_token){
+      throw new BadRequestException("You are already logged in")
+    }
+    const token = await this.jwt.signAsync(
+      { purpose: "pre-register" },
+      { expiresIn: "15m" },
+    );
+    return { upload_token: token };
+  }
+
+  async signIn(login: string, password: string, res: Response, req: Request) {
+    if((req.cookies as {refresh_token: string}).refresh_token){
+      throw new BadRequestException("You are already logged in")
+    }
+    const user = await this.userRepo.findOne(
       {
         $or: [{ name: login }, { email: login }],
       },
@@ -50,7 +72,7 @@ export class AuthService {
     password: string,
     imageId?: string,
   ) {
-    const potentialUser = await this.repo.findOne({
+    const potentialUser = await this.userRepo.findOne({
       $or: [{ name: username }, { email: email }],
     });
     if (potentialUser) {
@@ -59,16 +81,48 @@ export class AuthService {
 
     const tag = username.toLocaleLowerCase().replace(" ", "_");
 
+    let image: IMedia | null = null;
+    let changeOwner = false;
+    if (imageId) {
+      image = await this.mediaRepo.findOne({ id: imageId }, { populate: ["owner"] });
+      if (!image) {
+        throw new BadRequestException("Media with id does not exist");
+      }
+      if (!image.owner) {
+        changeOwner = true;
+      }
+    }
+
+    const mailsTurnedOn = process.env.MAIL_REQUIRED == "1" 
+
     const hash = await bcrypt.hash(password, 10);
-    const user = this.repo.create({
+    const user = this.userRepo.create({
       name: username,
       tag: tag,
       email: email,
       password: hash,
       image: imageId,
+      active: !mailsTurnedOn
     });
-    await this.repo.getEntityManager().flush();
-    return user;
+
+    if (changeOwner && image) {
+      image.owner = user;
+    }
+
+    const activation_hash = createHash("MD5").update(randomBytes(16)).digest('hex');
+
+
+    if(mailsTurnedOn){
+      await this.mailer.sendMail({
+        to: email,
+        subject: "Xitter account activation",
+        from: '"Xitter admin" <noreply@xitter.com>',
+        html: `<h1>Hello</h1><p>You just registered on xitter. To activate your account click <a href='http://${process.env.SERVER_ROOT}/auth/activate?hash=${activation_hash}'>here</a></p>`,
+      })
+      user.activation_hash = activation_hash;
+    }
+    await this.userRepo.getEntityManager().flush();
+    return mailsTurnedOn ? {message: "Check your mail in order to activate your account" }: user
   }
   async refreshToken(req: Request, res: Response) {
     const refresh_token = (req.cookies as { refresh_token: string })
@@ -82,7 +136,7 @@ export class AuthService {
       id: string;
       version: number;
     }>(refresh_token);
-    const user = await this.repo.findOne(
+    const user = await this.userRepo.findOne(
       { id: payload.id },
       { fields: ["name", "refresh_version"] },
     );
@@ -113,7 +167,7 @@ export class AuthService {
     const payload = await this.jwt.verifyAsync<{ id: string; version: string }>(
       refresh_token,
     );
-    const user = await this.repo.findOne(
+    const user = await this.userRepo.findOne(
       { id: payload.id },
       { fields: ["refresh_version"] },
     );
@@ -122,6 +176,34 @@ export class AuthService {
     }
     user.refresh_version += 1;
     res.clearCookie("refresh_token");
-    await this.repo.getEntityManager().flush();
+    await this.userRepo.getEntityManager().flush();
+  }
+  async activate(hash: string){
+    const user = await this.userRepo.findOne({activation_hash: hash})
+    if(!user){
+      throw new BadRequestException("This account is already activated or doesn't exist")
+    }
+    user.activation_hash = null
+    user.active = true;
+    await this.userRepo.getEntityManager().flush()
+  }
+  async sendResetPass(userId: string){
+    const user = (await this.userRepo.findOne({id: userId}))!
+    const resetHash = createHash("MD5").update(randomBytes(16)).digest('hex');
+    user.active = false
+    user.change_hash = resetHash
+    await this.userRepo.getEntityManager().flush()
+  }
+  async resetPassword(data: ChangePassDTO){
+    const user = await this.userRepo.findOne({change_hash: data.hash})
+    if(!user){
+      throw new BadRequestException("You aren't changing passwords")
+    }
+    user.change_hash = null;
+    let password = await user.password.load()
+    password = await bcrypt.hash(data.newPassword, 10)
+
+    await this.userRepo.getEntityManager().flush()
+
   }
 }

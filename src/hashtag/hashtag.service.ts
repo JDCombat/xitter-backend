@@ -12,7 +12,7 @@ export class HashtagService {
       (
         await this.repo.findOne(
           { name },
-          { populate: ["posts"], fields: ["posts"] },
+          { populate: ["posts", "posts.media"], fields: ["posts"] },
         )
       )?.posts ?? []
     );

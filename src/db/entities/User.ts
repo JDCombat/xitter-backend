@@ -13,12 +13,15 @@ export const UserSchema = defineEntity({
     tag: p.string().unique(),
     email: p.string().unique().hidden(),
     password: p.string().hidden().ref().lazy(),
+    active: p.boolean().hidden().default(false),
+    activation_hash: p.string().hidden().nullable(),
+    change_hash: p.string().hidden().nullable(),
     refresh_version: p
       .integer()
       .onCreate(() => 0)
       .hidden()
       .lazy(),
-    image: () => p.oneToOne(MediaSchema).nullable().owner(),
+    image: () => p.oneToOne(MediaSchema).nullable().owner().serializer((value) => value?.url ?? process.env.SERVER_ROOT + "/media/defaultPfp"),
     posts: () => p.oneToMany(PostSchema).mappedBy("author"),
     following: () =>
       p.manyToMany(UserSchema).inversedBy("followers").nullable(),
