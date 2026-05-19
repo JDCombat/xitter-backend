@@ -22,6 +22,9 @@ export class AuthService {
     private readonly mediaRepo: MediaRepository,
     private readonly mailer: MailerService
   ) {}
+
+  tokenBlacklist: string[] = []
+
   async getPreRegisterToken(req: Request) {
     if((req.cookies as {refresh_token: string}).refresh_token){
       throw new BadRequestException("You are already logged in")
@@ -41,7 +44,6 @@ export class AuthService {
       {
         $or: [{ name: login }, { email: login }],
       },
-      { fields: ["*", "refresh_version"] },
     );
     if (!user) {
       throw new UnauthorizedException("Invalid username or password");
@@ -50,9 +52,8 @@ export class AuthService {
     if (!(await bcrypt.compare(password, passwordHash!))) {
       throw new UnauthorizedException("Invalid password");
     }
-    const payload = { sub: user.id, username: user.name };
     const refreshToken = await this.jwt.signAsync(
-      { id: user.id, version: user.refresh_version },
+      { id: user.id },
       { expiresIn: "7d" },
     );
     res.cookie("refresh_token", refreshToken, {
@@ -61,6 +62,11 @@ export class AuthService {
       secure: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
+
+    user.refresh_token = refreshToken
+    await this.userRepo.getEntityManager().flush()
+
+    const payload = { sub: user.id, username: user.name };
 
     return {
       access_token: await this.jwt.signAsync(payload),
@@ -138,14 +144,14 @@ export class AuthService {
     }>(refresh_token);
     const user = await this.userRepo.findOne(
       { id: payload.id },
-      { fields: ["name", "refresh_version"] },
+      { fields: ["name", "refresh_token"] },
     );
-    if (payload.version != user?.refresh_version) {
+    if (payload.id != user?.id) {
       throw new UnauthorizedException("You already logged out");
     }
-    const access_payload = { sub: user.id, username: user.name };
+    const access_payload = { sub: user?.id, username: user?.name };
     const refresh_token_update = await this.jwt.signAsync(
-      { id: user.id, version: user.refresh_version },
+      { id: user?.id },
       { expiresIn: "7d" },
     );
     res.cookie("refresh_token", refresh_token_update, {
@@ -154,6 +160,9 @@ export class AuthService {
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
+    user!.refresh_token = refresh_token_update
+    await this.userRepo.getEntityManager().flush()
+
     return {
       access_token: await this.jwt.signAsync(access_payload),
     };
@@ -169,13 +178,19 @@ export class AuthService {
     );
     const user = await this.userRepo.findOne(
       { id: payload.id },
-      { fields: ["refresh_version"] },
+      { fields: ["refresh_token"] },
     );
     if (!user) {
       throw new UnauthorizedException("You already logged out");
     }
-    user.refresh_version += 1;
+    user.refresh_token = null;
     res.clearCookie("refresh_token");
+
+    if(req.headers.authorization?.startsWith("Bearer: ")){
+      const token = req.headers.authorization.split(" ")[1]
+      this.tokenBlacklist.push(token)
+    }
+
     await this.userRepo.getEntityManager().flush();
   }
   async activate(hash: string){

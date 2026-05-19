@@ -37,6 +37,6 @@ export class ChangePassDTO{
   hash: string;
 
   @ApiProperty({ example: "6d5321fea8f", description: "New password" })
-  @IsNotEmpty
+  @IsNotEmpty()
   newPassword: string
 }

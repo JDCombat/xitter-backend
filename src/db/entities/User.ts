@@ -16,9 +16,9 @@ export const UserSchema = defineEntity({
     active: p.boolean().hidden().default(false),
     activation_hash: p.string().hidden().nullable(),
     change_hash: p.string().hidden().nullable(),
-    refresh_version: p
-      .integer()
-      .onCreate(() => 0)
+    refresh_token: p
+      .string()
+      .nullable()
       .hidden()
       .lazy(),
     image: () => p.oneToOne(MediaSchema).nullable().owner().serializer((value) => value?.url ?? process.env.SERVER_ROOT + "/media/defaultPfp"),
