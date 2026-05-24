@@ -13,6 +13,7 @@ import { IMedia } from "src/db/entities/Media";
 import { MailerService } from "@nestjs-modules/mailer";
 import { createHash, randomBytes } from "crypto";
 import { ChangePassDTO } from "./dtos";
+import { TokenBlacklistService } from "./token-blacklist.service";
 
 @Injectable()
 export class AuthService {
@@ -20,10 +21,9 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly userRepo: UserRepository,
     private readonly mediaRepo: MediaRepository,
-    private readonly mailer: MailerService
+    private readonly mailer: MailerService,
+    private readonly blacklist: TokenBlacklistService,
   ) {}
-
-  tokenBlacklist: string[] = []
 
   async getPreRegisterToken(req: Request) {
     if((req.cookies as {refresh_token: string}).refresh_token){
@@ -44,6 +44,7 @@ export class AuthService {
       {
         $or: [{ name: login }, { email: login }],
       },
+      { fields: ["name", "password", "refresh_token"] },
     );
     if (!user) {
       throw new UnauthorizedException("Invalid username or password");
@@ -140,16 +141,15 @@ export class AuthService {
     }
     const payload = await this.jwt.verifyAsync<{
       id: string;
-      version: number;
     }>(refresh_token);
     const user = await this.userRepo.findOne(
       { id: payload.id },
       { fields: ["name", "refresh_token"] },
     );
-    if (payload.id != user?.id) {
+    if (refresh_token != user?.refresh_token) {
       throw new UnauthorizedException("You already logged out");
     }
-    const access_payload = { sub: user?.id, username: user?.name };
+    const access_payload = { sub: user?.id, username: user?.name};
     const refresh_token_update = await this.jwt.signAsync(
       { id: user?.id },
       { expiresIn: "7d" },
@@ -173,7 +173,7 @@ export class AuthService {
     if (!refresh_token) {
       throw new UnauthorizedException("You already logged out");
     }
-    const payload = await this.jwt.verifyAsync<{ id: string; version: string }>(
+    const payload = await this.jwt.verifyAsync<{ id: string }>(
       refresh_token,
     );
     const user = await this.userRepo.findOne(
@@ -183,12 +183,16 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException("You already logged out");
     }
+    if(user.refresh_token != refresh_token){
+      throw new UnauthorizedException("You already logged out")
+    }
     user.refresh_token = null;
     res.clearCookie("refresh_token");
 
-    if(req.headers.authorization?.startsWith("Bearer: ")){
-      const token = req.headers.authorization.split(" ")[1]
-      this.tokenBlacklist.push(token)
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      const accessToken = authHeader.split(" ")[1];
+      this.blacklist.invalidate(accessToken);
     }
 
     await this.userRepo.getEntityManager().flush();
