@@ -218,7 +218,7 @@ export class AuthService {
 
     await this.mailer.sendMail({
         to: email,
-        subject: "Xitter account activation",
+        subject: "Xitter account password change",
         from: '"Xitter admin" <noreply@xitter.com>',
         html: `<h1>Hello</h1><p>You just attempted to reset a password on a xitter account. To chagne your password click <a href='http://${process.env.RESET_PASSWORD_ROUTE}?hash=${resetHash}'>here</a></p>`,
     })
@@ -231,10 +231,10 @@ export class AuthService {
       throw new BadRequestException("You aren't changing passwords")
     }
     user.change_hash = null;
-    let password = await user.password.load()
-    password = await bcrypt.hash(data.newPassword, 10)
+    user.active = true
+    await user.password.load()
+    user.password.set(await bcrypt.hash(data.newPassword, 10))
 
     await this.userRepo.getEntityManager().flush()
-
   }
 }

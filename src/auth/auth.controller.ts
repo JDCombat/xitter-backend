@@ -102,7 +102,7 @@ export class AuthController {
   @ApiOperation({ summary: "Send a password-reset email to the authenticated user" })
   @ApiOkResponse({ description: "Password reset email sent" })
   @ApiUnauthorizedResponse({ description: "Not authenticated" })
-  @Post("/resetPassword")
+  @Post("/sendResetPassword")
   async sendResetPassword(@Body("email") email: string){
     return await this.authService.sendResetPass(email);
   }
