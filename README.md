@@ -148,23 +148,27 @@ Activate an account from the link emailed on sign-up.
 
 ---
 
-#### `GET /auth/resetPassword` 
-Trigger a password-reset flow for the currently authenticated user. Sets a reset hash on the user and deactivates the account until the reset is completed.
+#### `POST /auth/sendResetPassword`
+Trigger a password-reset flow. Sets a `change_hash` on the account, deactivates it until the reset is completed, and emails a link to the client reset-password form (`RESET_PASSWORD_ROUTE`).
 
-**Auth:** Access Token  
-**Response `200`:** no body (email sent with reset link, contains `change_hash`).
+**Request body (`application/json`):**
+```json
+{ "email": "john@example.com" }
+```
+**Response `200`:** no body (email sent with reset link, contains `?hash=<change_hash>`).  
+**Error `422`:** email notifications are turned off (`MAIL_REQUIRED=0`).
 
 ---
 
 #### `POST /auth/resetPassword`
-Complete a password reset using the hash from the email.
+Complete a password reset using the hash from the reset email.
 
 **Request body (`application/json`):**
 ```json
 { "hash": "6d5321fea8f...", "newPassword": "newP@ss!" }
 ```
-**Response `200`:** no body.  
-**Error `400`:** hash not found.
+**Response `200`:** no body (account re-activated, password updated).  
+**Error `400`:** hash not found or already used.
 
 ---
 
