@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Post, Query, Req, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, Query, Req, Res } from "@nestjs/common";
 import { AuthService } from "./auth.service";
-import { ChangePassDTO, ChangePassMailDTO, SignInDTO, SignUpDTO } from "./dtos";
+import { ChangePassDTO, SignInDTO, SignUpDTO } from "./dtos";
 import { type Response, type Request } from "express";
 import {
   ApiTags,
@@ -12,11 +12,8 @@ import {
   ApiBody,
   ApiCookieAuth,
   ApiBadRequestResponse,
-  ApiBearerAuth,
   ApiQuery,
 } from "@nestjs/swagger";
-import { AuthGuard } from "src/auth.guard";
-import { User, type UserPayload } from "src/user/user.decorator";
 
 @ApiTags("auth")
 @Controller("auth")

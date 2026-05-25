@@ -9,13 +9,10 @@ import {
   Post,
   Req,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
-  ValidationPipe,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { MediaService } from "./media.service";
-import { AuthGuard } from "src/auth.guard";
 import {
   ApiTags,
   ApiBearerAuth,
