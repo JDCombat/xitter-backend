@@ -21,6 +21,7 @@ export class AuthGuard implements CanActivate {
     if (!token) {
       throw new UnauthorizedException();
     }
+    console.log(this.blacklist.isBlacklisted(token))
     if (this.blacklist.isBlacklisted(token)) {
       throw new UnauthorizedException();
     }

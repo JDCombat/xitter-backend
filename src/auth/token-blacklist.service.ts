@@ -9,11 +9,14 @@ export class TokenBlacklistService {
 
   invalidate(token: string): void {
     this.blacklist.add(token);
+    console.log(this.blacklist)
 
     try {
-      const payload = this.jwt.decode(token) as { exp?: number } | null;
+      const payload = this.jwt.decode(token) as { exp?: number };
+      console.log(payload)
       if (payload?.exp) {
         const msUntilExpiry = payload.exp * 1000 - Date.now();
+        console.log(msUntilExpiry)
         if (msUntilExpiry > 0) {
           setTimeout(() => this.blacklist.delete(token), msUntilExpiry);
         }
@@ -23,6 +26,7 @@ export class TokenBlacklistService {
   }
 
   isBlacklisted(token: string): boolean {
+    console.log(this.blacklist)
     return this.blacklist.has(token);
   }
 }

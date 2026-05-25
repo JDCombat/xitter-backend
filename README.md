@@ -25,6 +25,7 @@ MAIL_SERVER="smtp.example.com"
 MAIL_USERNAME="noreply@example.com"
 MAIL_PASSWORD="your_mail_password"
 MAIL_REQUIRED="0"                         # set to "1" to require email activation on sign-up
+RESET_PASSWORD_ROUTE="route for client reset password form"
 ```
 
 ### Running with Docker Compose
@@ -130,11 +131,11 @@ Exchange the `refresh_token` cookie for a fresh access token. Rotates the refres
 ---
 
 #### `POST /auth/logout`
-Invalidate the current session.
+Invalidate the current session. The refresh token is cleared from the cookie and nulled in the database. The **access token is blacklisted in-memory** until its natural 10-minute expiry — any request using it after logout will receive `401 Unauthorized`.
 
-**Request:** `refresh_token` cookie.  
-**Response `200`:** clears the cookie, nullifies the stored token server-side. No body.  
-**Error `401`:** not logged in.
+**Request:** `refresh_token` cookie + `Authorization: Bearer <access_token>` header (optional — blacklisting only occurs if the header is present).  
+**Response `200`:** no body.  
+**Error `401`:** not logged in or refresh token already invalidated.
 
 ---
 

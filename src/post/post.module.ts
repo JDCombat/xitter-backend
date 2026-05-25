@@ -19,4 +19,4 @@ import { MediaSchema } from "src/db/entities/Media";
   ],
   providers: [PostService],
 })
-export class PostModule {}
+export class PostModule { }

@@ -43,9 +43,7 @@ export class MediaService {
     return wrap(media);
   }
   async getFile(id: string) {
-    if(id == "default"){
-      return new StreamableFile(createReadStream(path.join(process.cwd(), "uploads", "default.png")), {type: "image/png"})
-    }
+
     const file = await this.repo.findOne(
       { id },
       { fields: ["name", "mimeType"] },
@@ -59,5 +57,8 @@ export class MediaService {
     return new StreamableFile(stream, {
       type: file.mimeType,
     });
+  }
+  getDefault(){
+    return new StreamableFile(createReadStream(path.join(process.cwd(), "assets", "default.png")), {type: "image/png"})
   }
 }

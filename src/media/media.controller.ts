@@ -11,6 +11,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  ValidationPipe,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { MediaService } from "./media.service";
@@ -69,6 +70,11 @@ export class MediaController {
     return this.service.uploadFile(file, req);
   }
 
+  @Get("/default")
+  getDefault(){
+    return this.service.getDefault()
+  }
+
   @ApiOperation({ summary: "Retrieve media metadata by UUID" })
   @ApiParam({ name: "id", description: "Media UUID", type: String })
   @ApiOkResponse({ description: "Media metadata including URL" })
@@ -77,4 +83,5 @@ export class MediaController {
   async getMedia(@Param("id", ParseUUIDPipe) id: string) {
     return this.service.getFile(id);
   }
+
 }

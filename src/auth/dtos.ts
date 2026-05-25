@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsUUID } from "class-validator";
+import { IsEmail, IsHash, IsNotEmpty, IsOptional, IsUUID } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class SignUpDTO {
@@ -31,9 +31,11 @@ export class SignInDTO {
   password: string;
 }
 
+
 export class ChangePassDTO{
   @ApiProperty({ example: "6d5321fea8f", description: "Hash provided in mail for changing the password" })
   @IsNotEmpty()
+  @IsHash("md5")
   hash: string;
 
   @ApiProperty({ example: "6d5321fea8f", description: "New password" })

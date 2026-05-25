@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   UnauthorizedException,
+  UnprocessableEntityException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { UserRepository } from "src/db/repositories/userRepository";
@@ -160,7 +161,7 @@ export class AuthService {
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    user!.refresh_token = refresh_token_update
+    user.refresh_token = refresh_token_update
     await this.userRepo.getEntityManager().flush()
 
     return {
@@ -206,11 +207,22 @@ export class AuthService {
     user.active = true;
     await this.userRepo.getEntityManager().flush()
   }
-  async sendResetPass(userId: string){
-    const user = (await this.userRepo.findOne({id: userId}))!
+  async sendResetPass(email: string){
+    if(process.env.MAIL_REQUIRED == "0" ){
+      throw new UnprocessableEntityException("Cannot process password reset: email notifications are turned off.")
+    }
+    const user = (await this.userRepo.findOne({email}))!
     const resetHash = createHash("MD5").update(randomBytes(16)).digest('hex');
     user.active = false
     user.change_hash = resetHash
+
+    await this.mailer.sendMail({
+        to: email,
+        subject: "Xitter account activation",
+        from: '"Xitter admin" <noreply@xitter.com>',
+        html: `<h1>Hello</h1><p>You just attempted to reset a password on a xitter account. To chagne your password click <a href='http://${process.env.RESET_PASSWORD_ROUTE}?hash=${resetHash}'>here</a></p>`,
+    })
+
     await this.userRepo.getEntityManager().flush()
   }
   async resetPassword(data: ChangePassDTO){

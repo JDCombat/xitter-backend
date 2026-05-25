@@ -7,6 +7,7 @@ import { UserModule } from "./user/user.module";
 import { MediaModule } from "./media/media.module";
 import { HashtagModule } from "./hashtag/hashtag.module";
 import { MailerModule } from "@nestjs-modules/mailer";
+import { TokenBlacklistModule } from "./auth/token-blacklist.module";
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { MailerModule } from "@nestjs-modules/mailer";
     UserModule,
     MediaModule,
     HashtagModule,
+    TokenBlacklistModule
   ],
 })
 export class AppModule {}

@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post, Query, Req, Res, UseGuards } from "@nestjs/common";
 import { AuthService } from "./auth.service";
-import { ChangePassDTO, SignInDTO, SignUpDTO } from "./dtos";
+import { ChangePassDTO, ChangePassMailDTO, SignInDTO, SignUpDTO } from "./dtos";
 import { type Response, type Request } from "express";
 import {
   ApiTags,
@@ -102,14 +102,12 @@ export class AuthController {
     return await this.authService.activate(hash)
   }
 
-  @ApiBearerAuth()
   @ApiOperation({ summary: "Send a password-reset email to the authenticated user" })
   @ApiOkResponse({ description: "Password reset email sent" })
   @ApiUnauthorizedResponse({ description: "Not authenticated" })
-  @UseGuards(AuthGuard)
-  @Get("/resetPassword")
-  async sendResetPassword(@User() user: UserPayload){
-    return await this.authService.sendResetPass(user.sub);
+  @Post("/resetPassword")
+  async sendResetPassword(@Body("email") email: string){
+    return await this.authService.sendResetPass(email);
   }
 
   @ApiOperation({ summary: "Reset password using the hash from the reset email" })
@@ -117,7 +115,7 @@ export class AuthController {
   @ApiOkResponse({ description: "Password changed successfully" })
   @ApiBadRequestResponse({ description: "Invalid reset hash" })
   @Post("/resetPassword")
-  async resetPassword(data: ChangePassDTO){
+  async resetPassword(@Body() data: ChangePassDTO){
     return await this.authService.resetPassword(data)
   }
 }
