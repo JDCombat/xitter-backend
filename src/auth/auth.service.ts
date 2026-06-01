@@ -45,14 +45,17 @@ export class AuthService {
       {
         $or: [{ name: login }, { email: login }],
       },
-      { fields: ["name", "password", "refresh_token"] },
+      { fields: ["name", "password", "refresh_token", "active"] },
     );
     if (!user) {
       throw new UnauthorizedException("Invalid username or password");
     }
     const passwordHash = await user.password.load();
     if (!(await bcrypt.compare(password, passwordHash!))) {
-      throw new UnauthorizedException("Invalid password");
+      throw new UnauthorizedException("Invalid username or password");
+    }
+    if (!user.active) {
+      throw new UnauthorizedException("Account is not activated");
     }
     const refreshToken = await this.jwt.signAsync(
       { id: user.id },
@@ -87,7 +90,7 @@ export class AuthService {
       throw new ConflictException("User with name or mail already exists");
     }
 
-    const tag = username.toLocaleLowerCase().replace(" ", "_");
+    const tag = username.toLocaleLowerCase().replaceAll(" ", "_");
 
     let image: IMedia | null = null;
     let changeOwner = false;
@@ -96,9 +99,10 @@ export class AuthService {
       if (!image) {
         throw new BadRequestException("Media with id does not exist");
       }
-      if (!image.owner) {
-        changeOwner = true;
+      if(image.owner != null){
+        throw new BadRequestException("Media is already owned by another user")
       }
+      changeOwner = true;
     }
 
     const mailsTurnedOn = process.env.MAIL_REQUIRED == "1" 
@@ -211,7 +215,11 @@ export class AuthService {
     if(process.env.MAIL_REQUIRED == "0" ){
       throw new UnprocessableEntityException("Cannot process password reset: email notifications are turned off.")
     }
-    const user = (await this.userRepo.findOne({email}))!
+    const user = await this.userRepo.findOne({email});
+    if (!user) {
+      throw new BadRequestException("No account with that email exists")
+    }
+    user.refresh_token = null;
     const resetHash = createHash("MD5").update(randomBytes(16)).digest('hex');
     user.active = false
     user.change_hash = resetHash

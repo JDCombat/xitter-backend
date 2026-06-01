@@ -63,7 +63,7 @@ export class UserController {
   @UseGuards(AuthGuard)
   @Post("/changePicture")
   async changePfp(@Body("mediaId") imageId: string, @User() user: UserPayload) {
-    return this.service.changeProfilePicture(imageId, user.sub);
+    return this.service.changeProfilePicture(user.sub, imageId);
   }
 
   @ApiBearerAuth()

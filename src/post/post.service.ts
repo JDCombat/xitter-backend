@@ -106,8 +106,10 @@ export class PostService {
           post.hashtags?.add(tag);
         });
       }
+    }
+    if (postData.mediaIds !== undefined) {
       post.media?.removeAll();
-      if (postData.mediaIds) {
+      if (postData.mediaIds.length > 0) {
         const media = await this.mediaRepo.find({
           id: { $in: postData.mediaIds },
         });
@@ -122,10 +124,10 @@ export class PostService {
           post.media?.add(e);
         });
       }
-      await this.postRepo.getEntityManager().flush();
-      await this.hashtagRepo.getEntityManager().flush();
-      return post;
     }
+    await this.postRepo.getEntityManager().flush();
+    await this.hashtagRepo.getEntityManager().flush();
+    return post;
   }
   async reply(
     postId: string,
@@ -199,7 +201,7 @@ export class PostService {
   async deletePost(postId: string, userId: string) {
     const post = await this.postRepo.findOne(
       { id: postId },
-      { fields: ["author", "repliesTo"], populate: ["repliesTo:ref"] },
+      { fields: ["author", "repliesTo", "reposts"], populate: ["repliesTo:ref", "reposts:ref"] },
     );
     if (!post) {
       throw new NotFoundException("Post with id does not exist");
@@ -213,6 +215,12 @@ export class PostService {
         { replyCount: raw("reply_count - 1") },
       );
     }
+    if (post.reposts) {
+      await this.postRepo.nativeUpdate(
+        { id: post.reposts.id },
+        { repostsCount: raw("reposts_count - 1") },
+      );
+    }
     await this.postRepo.nativeDelete(post);
   }
   async repost(postId: string, userId: string) {
@@ -224,11 +232,11 @@ export class PostService {
         fields: ["author"],
       },
     );
-    if (toRepost?.author.id == userId) {
-      throw new BadRequestException("You can't repost your own post dumbass");
-    }
     if (!toRepost) {
       throw new NotFoundException("Post with id does not exist");
+    }
+    if (toRepost.author.id == userId) {
+      throw new BadRequestException("You can't repost your own post dumbass");
     }
     const user = (await this.userRepo.findOne(
       { id: userId },
@@ -240,7 +248,7 @@ export class PostService {
     if (user?.blockedUsers?.contains(toRepost.author)) {
       throw new BadRequestException("You have blocked this user");
     }
-    if ((await this.postRepo.count({ reposts: postId })) != 0) {
+    if ((await this.postRepo.count({ reposts: postId, author: userId })) != 0) {
       throw new BadRequestException("You already reposted this");
     }
     const repost = this.postRepo.create({
@@ -294,16 +302,16 @@ export class PostService {
         fields: ["author", "likes"],
       },
     );
-    if (post?.author == user) {
-      throw new BadRequestException("You can't like your own post dumbass");
-    }
     if (!post) {
       throw new NotFoundException("Post with id does not exist");
+    }
+    if (post.author == user) {
+      throw new BadRequestException("You can't like your own post dumbass");
     }
     if (post.author.blockedUsers?.contains(user)) {
       throw new BadRequestException("This user has blocked you");
     }
-    if (user?.blockedUsers?.contains(post.author)) {
+    if (user.blockedUsers?.contains(post.author)) {
       throw new BadRequestException("You have blocked this user");
     }
     if (post.likes?.contains(user)) {

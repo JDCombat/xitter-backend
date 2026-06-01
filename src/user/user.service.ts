@@ -15,7 +15,7 @@ export class UserService {
     private readonly userRepo: UserRepository,
     private readonly mediaRepo: MediaRepository,
     private readonly em: EntityManager
-  ) {}
+  ) { }
   async getById(id: string) {
     return await this.userRepo.findOne(
       { id },
@@ -203,12 +203,12 @@ export class UserService {
     user!.mutedUsers?.remove(userToMute);
     await this.userRepo.getEntityManager().flush();
   }
-  async getFollowers(userId: string){
-    const followers = await this.userRepo.findOne({id: userId}, {populate: ["followers", "followers.image"], fields: ["followers"]})
+  async getFollowers(userId: string) {
+    const followers = await this.userRepo.findOne({ id: userId }, { populate: ["followers", "followers.image"], fields: ["followers"] })
     return followers?.followers;
   }
-  async getFollowing(userId: string){
-    const following = await this.userRepo.findOne({id: userId}, {populate: ["following", "following.image"], fields: ["following"]})
+  async getFollowing(userId: string) {
+    const following = await this.userRepo.findOne({ id: userId }, { populate: ["following", "following.image"], fields: ["following"] })
     return following?.following;
   }
   async getFeed(userId: string) {
