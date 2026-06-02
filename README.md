@@ -46,9 +46,7 @@ Swagger UI: `http://localhost:3000/docs`
 npm install
 
 # Make sure PostgreSQL is running and the credentials in .env match
-npm run start:dev   # watch mode
-# or
-npm run start       # production mode (requires npm run build first)
+npm run start
 ```
 
 ---
